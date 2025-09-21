@@ -1,25 +1,40 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+
+// --- Layout & Home ---
+import MainLayout from './components/layout/MainLayout';
 import HomePage from './pages/HomePage';
-import UploadPage from './pages/UploadPage'; // UC-39
-import OcrProcessingPage from './pages/OcrProcessingPage'; // UC-87
-import SuggestMetadataPage from './pages/SuggestMetadataPage'; // UC-73
-import DuplicateCheckPage from './pages/DuplicateCheckPage'; // UC-88
-import DocumentViewerPage from './pages/DocumentViewerPage'; // UC-85 & UC-86
+
+// --- Use Case Pages ---
+import UC39_UploadPage from './pages/UC39_UploadPage';
+import UC73_SuggestMetadataPage from './pages/UC73_SuggestMetadataPage';
+import UC84_AutoRoutePage from './pages/UC84_AutoRoutePage';
+import UC87_OcrProcessingPage from './pages/UC87_OcrProcessingPage';
+import UC88_DuplicateCheckPage from './pages/UC88_DuplicateCheckPage';
+import DocumentAccessPage from './pages/DocumentAccessPage'; // Trang gộp UC-85 & UC-86
 
 function App() {
   return (
     <Router>
-      <div className="bg-gray-100 min-h-screen">
-        {/* Có thể thêm Layout chung (Navbar, Sidebar) ở đây */}
-        <Routes>
+      <Routes>
+        {/* Luồng chính của ứng dụng có Layout (header, footer...) */}
+        <Route element={<MainLayout />}>
           <Route path="/" element={<HomePage />} />
-          <Route path="/upload" element={<UploadPage />} />
-          <Route path="/ocr" element={<OcrProcessingPage />} />
-          <Route path="/suggest-metadata" element={<SuggestMetadataPage />} />
-          <Route path="/check-duplicates" element={<DuplicateCheckPage />} />
-          <Route path="/viewer/:docId" element={<DocumentViewerPage />} />
-        </Routes>
-      </div>
+          
+          {/* Trang tổng hợp quy trình Upload */}
+          <Route path="/uc39-upload-workflow" element={<UC39_UploadPage />} />
+
+          {/* Các trang demo tính năng riêng lẻ */}
+          <Route path="/uc73-suggest-metadata" element={<UC73_SuggestMetadataPage />} />
+          <Route path="/uc84-auto-route" element={<UC84_AutoRoutePage />} />
+          <Route path="/uc87-ocr-processing" element={<UC87_OcrProcessingPage />} />
+          <Route path="/uc88-duplicate-check" element={<UC88_DuplicateCheckPage />} />
+        </Route>
+
+        {/* Luồng truy cập tài liệu không cần Layout chung */}
+        {/* Đây là trang mà người dùng bên ngoài sẽ truy cập qua link chia sẻ */}
+        <Route path="/document/access/:docId" element={<DocumentAccessPage />} />
+
+      </Routes>
     </Router>
   );
 }

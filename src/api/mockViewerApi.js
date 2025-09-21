@@ -93,3 +93,95 @@ export const processPayment = async (docId, packageType, paymentMethod, paymentD
         expiryDate: packageType === 'read' ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleString('vi-VN') : 'Không giới hạn',
     };
 };
+
+// Giả lập API để lấy thông tin truy cập tài liệu dựa trên một ID
+export const mockGetDocumentAccessDetails = async (docId) => {
+    console.log(`[UC-85/86] Fetching access details for docId: ${docId}`);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Kịch bản 1: Link không hợp lệ hoặc hết hạn
+    if (docId === 'expired-link' || docId === 'invalid-id') {
+        return {
+            success: false,
+            error: "404 Not Found",
+            message: "Đường dẫn không hợp lệ hoặc tài liệu đã hết hạn truy cập.",
+        };
+    }
+
+    // Kịch bản 2: Truy cập công khai có giới hạn (UC-86)
+    if (docId.startsWith('visitor-')) {
+        const expiryTimestamp = new Date().getTime() + 72 * 3600 * 1000; // Còn 72 giờ
+        return {
+            success: true,
+            accessType: 'VISITOR',
+            document: {
+                id: docId,
+                name: "Báo cáo phân tích thị trường Q3-2025.pdf",
+                owner: "Phòng Marketing",
+                sharedBy: "hoang.ln@innotech.vn",
+                sharedAt: new Date().toISOString(),
+                expiresAt: new Date(expiryTimestamp).toISOString(),
+                watermark: `CONFIDENTIAL - ${docId}`,
+                totalPages: 15,
+                // Giả lập nội dung trang
+                pagesContent: Array(15).fill(null).map((_, i) => `Đây là nội dung trang ${i + 1} của tài liệu. Nội dung này được bảo mật.`),
+            }
+        };
+    }
+
+    // Kịch bản 3: Yêu cầu trả phí để xem (UC-85)
+    if (docId.startsWith('paid-')) {
+        return {
+            success: true,
+            accessType: 'PAYMENT_REQUIRED',
+            document: {
+                id: docId,
+                name: "Tài liệu nghiên cứu chuyên sâu về AI.docx",
+                author: "Viện Nghiên Cứu INNOTECH",
+                price: 250000, // Giá gốc
+                previewPages: 3,
+                totalPages: 50,
+                // Giả lập nội dung trang preview (bị làm mờ)
+                pagesContent: Array(3).fill(null).map((_, i) => `Đây là nội dung trang preview ${i + 1}. Mua để xem toàn bộ nội dung.`),
+            },
+            packages: [
+                { id: 'view_once', name: 'Xem 1 lần', price: 50000, description: 'Truy cập xem trong 24h.' },
+                { id: 'buy_copy', name: 'Mua bản sao', price: 250000, description: 'Tải xuống bản PDF không giới hạn.' },
+                { id: 'subscribe', name: 'Gói thuê bao', price: 500000, description: 'Truy cập toàn bộ tài liệu trong 1 tháng.' }
+            ]
+        };
+    }
+    
+    // Mặc định là lỗi
+    return { success: false, error: "400 Bad Request", message: "Định dạng ID tài liệu không được hỗ trợ." };
+};
+
+
+// API giả lập thanh toán
+export const mockProcessPayment = async (docId, packageId, paymentDetails) => {
+    console.log(`[UC-85] Processing payment for docId: ${docId}, package: ${packageId}`, paymentDetails);
+    await new Promise(resolve => setTimeout(resolve, 2500));
+    
+    // 80% thành công
+    if (Math.random() < 0.8) {
+        return {
+            success: true,
+            transactionId: `TRX-${Date.now()}`,
+            message: "Thanh toán thành công! Bạn có thể truy cập tài liệu ngay bây giờ.",
+            // Trả về document data đầy đủ sau khi thanh toán
+            document: {
+                 id: docId,
+                name: "Tài liệu nghiên cứu chuyên sâu về AI.docx",
+                author: "Viện Nghiên Cứu INNOTECH",
+                totalPages: 50,
+                watermark: `PAID - ${paymentDetails.email}`,
+                pagesContent: Array(50).fill(null).map((_, i) => `Đây là nội dung đầy đủ của trang ${i + 1}. Cảm ơn bạn đã mua tài liệu.`),
+            }
+        };
+    } else {
+        return {
+            success: false,
+            message: "Thanh toán thất bại. Vui lòng thử lại hoặc liên hệ hỗ trợ."
+        };
+    }
+};

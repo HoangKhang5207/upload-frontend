@@ -1,90 +1,59 @@
-import React, { useState } from 'react';
-import { ArrowLeftIcon, LockClosedIcon, ShieldCheckIcon } from '@heroicons/react/24/solid';
-import InputField from '../../common/InputField';
+import React from 'react';
 
-const PaymentConfirmation = ({ document, selectedPackage, selectedMethod, onConfirm, onBack, isProcessing }) => {
-    const [transactionCode, setTransactionCode] = useState('');
-    const [otp, setOtp] = useState('');
-
-    const packageDetails = document.pricing[selectedPackage];
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        onConfirm({ transactionCode, otp });
-    };
-
-    const renderMethodSpecificFields = () => {
-        switch (selectedMethod) {
-            case 'VCB':
-                return (
-                    <div className="mt-6 space-y-4">
-                        <InputField
-                            label="Mã giao dịch Vietcombank"
-                            id="transactionCode"
-                            value={transactionCode}
-                            onChange={(e) => setTransactionCode(e.target.value)}
-                            required={true}
-                            helpText="Nhập mã giao dịch có định dạng: VCB123456789"
-                        />
-                         <InputField
-                            label="Mã OTP (nếu cần)"
-                            id="otp"
-                            value={otp}
-                            onChange={(e) => setOtp(e.target.value)}
-                            helpText="OTP chỉ yêu cầu cho giao dịch có giá trị cao"
-                        />
-                    </div>
-                );
-            case 'VNPay':
-            case 'MoMo':
-                 return (
-                    <div className="mt-8 text-center p-6 border border-dashed rounded-lg">
-                        <ShieldCheckIcon className="h-12 w-12 text-green-500 mx-auto mb-3"/>
-                        <h3 className="font-semibold text-lg text-gray-800">Đang chuyển hướng đến {selectedMethod}</h3>
-                        <p className="text-gray-600 mt-2">Bạn sẽ được chuyển đến trang thanh toán an toàn của {selectedMethod} để hoàn tất giao dịch.</p>
-                    </div>
-                 );
-            default:
-                return null;
-        }
+const PaymentConfirmation = ({ document, selectedPackage, onConfirm, onBack }) => {
+    // Thêm một điều kiện bảo vệ để tránh lỗi nếu không có gói nào được chọn
+    if (!selectedPackage) {
+        return (
+            <div className="text-center p-8">
+                <p className="text-red-600">Lỗi: Không có gói thanh toán nào được chọn.</p>
+                <button onClick={onBack} className="mt-4 text-sm font-medium text-blue-600 hover:underline">
+                    &larr; Quay lại để chọn gói
+                </button>
+            </div>
+        );
     }
 
-
     return (
-        <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-10 animate-fade-in">
-            <div className="flex items-center mb-6">
-                <button onClick={onBack} className="p-2 rounded-full hover:bg-gray-100 mr-4">
-                    <ArrowLeftIcon className="h-6 w-6 text-gray-600"/>
-                </button>
-                <h2 className="text-2xl font-bold text-gray-800">Xác nhận thanh toán</h2>
-            </div>
+        <div className="max-w-2xl mx-auto animate-fade-in">
+            <h2 className="text-2xl font-bold text-center text-gray-800">Xác nhận thanh toán</h2>
             
-            <form onSubmit={handleSubmit}>
-                <div className="bg-gray-50 border rounded-lg p-6 space-y-3">
-                    <h3 className="font-bold text-lg mb-4">Chi tiết giao dịch</h3>
-                    <div className="flex justify-between text-gray-700"><span>Tài liệu:</span> <span className="font-semibold text-right">{document.title}</span></div>
-                    <div className="flex justify-between text-gray-700"><span>Gói:</span> <span className="font-semibold">{selectedPackage === 'read' ? 'Quyền đọc (7 ngày)' : 'Quyền tải xuống'}</span></div>
-                    <div className="flex justify-between text-gray-700"><span>Phương thức:</span> <span className="font-semibold">{selectedMethod}</span></div>
-                    <hr className="my-3"/>
-                    <div className="flex justify-between text-gray-900">
-                        <span className="font-semibold text-lg">Số tiền:</span> 
-                        <span className="font-bold text-2xl text-purple-600">{packageDetails.price.toLocaleString('vi-VN')}{packageDetails.currency}</span>
+            <div className="mt-6 p-6 bg-white border rounded-lg shadow-sm">
+                <h3 className="font-semibold text-lg text-gray-900">Chi tiết đơn hàng</h3>
+                <div className="mt-4 space-y-3 text-sm">
+                    <div className="flex justify-between">
+                        <span className="text-gray-500">Tài liệu:</span>
+                        <span className="font-medium text-gray-800 text-right">{document.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-gray-500">Gói đã chọn:</span>
+                        <span className="font-medium text-gray-800">{selectedPackage.name}</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-3 mt-3">
+                        <span className="text-gray-500 font-bold">Tổng cộng:</span>
+                        <span className="font-bold text-xl text-blue-600">
+                            {selectedPackage.price.toLocaleString('vi-VN')} VNĐ
+                        </span>
                     </div>
                 </div>
+            </div>
 
-                {renderMethodSpecificFields()}
-
-                <div className="mt-8 flex justify-end">
-                    <button 
-                        type="submit" 
-                        disabled={isProcessing}
-                        className="w-full sm:w-auto flex items-center justify-center px-8 py-3 font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:bg-gray-400"
-                    >
-                        <LockClosedIcon className="h-5 w-5 mr-2"/>
-                        {isProcessing ? 'Đang xử lý...' : 'Xác nhận thanh toán'}
-                    </button>
-                </div>
-            </form>
+            <div className="mt-8 flex justify-between items-center">
+                {/* Nút này LUÔN LUÔN gọi hàm onBack */}
+                <button 
+                    onClick={onBack} 
+                    className="text-sm font-medium text-gray-600 hover:text-gray-800"
+                >
+                    &larr; Quay lại chọn gói
+                </button>
+                
+                {/* ✅ Đảm bảo nút này LUÔN LUÔN gọi hàm onConfirm */}
+                <button 
+                    onClick={onConfirm} 
+                    className="px-6 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700"
+                >
+                    Xác nhận & Thanh toán
+                </button>
+            </div>
         </div>
     );
 };

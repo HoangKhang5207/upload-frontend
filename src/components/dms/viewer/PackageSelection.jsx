@@ -1,95 +1,71 @@
 import React, { useState } from 'react';
-import { UserIcon, CalendarDaysIcon, DocumentTextIcon, StarIcon } from '@heroicons/react/24/solid';
-import { CheckCircleIcon } from '@heroicons/react/24/outline';
-import toast from 'react-hot-toast';
+import { ShieldCheckIcon } from '@heroicons/react/24/solid';
 
-// Giả lập icon cho các phương thức thanh toán
-const PaymentMethodIcon = ({ method }) => {
-    const icons = {
-        VCB: "https://seeklogo.com/images/V/vietcombank-logo-7872D24121-seeklogo.com.png",
-        VNPay: "https://vnpay.vn/s1/statics/Images/logo_vnpay_new.svg",
-        MoMo: "https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png"
-    };
-    return <img src={icons[method]} alt={`${method} logo`} className="h-8 object-contain" />;
-};
+const PackageSelection = ({ document, packages, onSelectPackage }) => {
+    // ✅ BƯỚC 2: KHỞI TẠO STATE
+    // useState must always be called, even if packages is undefined or empty.
+    const [selectedPackage, setSelectedPackage] = useState(packages && packages.length > 0 ? packages[0]?.id : '');
 
-const PackageSelection = ({ document, onProceed }) => {
-    const [selectedPackage, setSelectedPackage] = useState('read');
-    const [selectedMethod, setSelectedMethod] = useState('VCB');
+    // ✅ BƯỚC 1: THÊM ĐIỀU KIỆN BẢO VỆ
+    // Nếu `packages` chưa được truyền xuống hoặc là một mảng rỗng,
+    // component sẽ hiển thị một thông báo tải và dừng lại, không chạy code gây lỗi.
+    if (!packages || packages.length === 0) {
+        return <div className="text-center p-10 text-gray-500">Đang tải các gói cước...</div>;
+    }
 
-    const handleSubmit = () => {
-        if (!selectedPackage || !selectedMethod) {
-            toast.error("Vui lòng chọn gói và phương thức thanh toán.");
+    const handleSelection = () => {
+        if (!selectedPackage) {
+            alert("Vui lòng chọn một gói truy cập.");
             return;
         }
-        onProceed(selectedPackage, selectedMethod);
+        const chosenPackageObject = packages.find(p => p.id === selectedPackage);
+        onSelectPackage(chosenPackageObject);
     };
 
-    const packageDetails = document.pricing[selectedPackage];
-
     return (
-        <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-10">
-            {/* 1. Thông tin tài liệu */}
-            <div className="border border-gray-200 rounded-lg p-4 mb-8">
-                <h2 className="text-xl font-bold text-gray-800">{document.title}</h2>
-                <div className="flex flex-wrap items-center text-sm text-gray-500 mt-2 gap-x-4 gap-y-1">
-                    <span className="flex items-center"><UserIcon className="h-4 w-4 mr-1.5"/> Tác giả: {document.author}</span>
-                    <span className="flex items-center"><CalendarDaysIcon className="h-4 w-4 mr-1.5"/> Ngày phát hành: {document.publishDate}</span>
-                    <span className="flex items-center"><DocumentTextIcon className="h-4 w-4 mr-1.5"/> {document.pages} trang</span>
-                    <span className="flex items-center"><StarIcon className="h-4 w-4 mr-1.5 text-yellow-500"/> {document.rating} ({document.reviews} đánh giá)</span>
-                </div>
-            </div>
-
-            {/* 2. Chọn gói truy cập */}
-            <div className="mb-8">
-                <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center">
-                    <span className="text-white bg-purple-600 rounded-full h-6 w-6 text-sm flex items-center justify-center mr-3">2</span>
-                    Chọn gói truy cập
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {Object.entries(document.pricing).map(([key, pkg]) => (
-                        <div key={key} onClick={() => setSelectedPackage(key)} className={`p-5 border-2 rounded-lg cursor-pointer transition-all ${selectedPackage === key ? 'border-purple-500 bg-purple-50' : 'border-gray-300 hover:border-purple-400'}`}>
-                            <div className="flex justify-between items-start">
-                                <h4 className="font-bold text-lg text-gray-800">{key === 'read' ? 'Quyền đọc' : 'Quyền tải xuống'}</h4>
-                                <p className="text-xl font-bold text-purple-600">{pkg.price.toLocaleString('vi-VN')}{pkg.currency}</p>
+        <div className="max-w-4xl mx-auto animate-fade-in">
+            <h1 className="text-3xl font-bold text-gray-800 text-center">{document.name}</h1>
+            <p className="text-center text-gray-500 mt-2">Tác giả: {document.author}</p>
+            
+            <div className="mt-8 p-6 bg-gray-50 border rounded-lg">
+                <h2 className="text-xl font-semibold text-gray-700">Chọn gói truy cập</h2>
+                <p className="text-sm text-gray-500 mt-1">Để xem toàn bộ nội dung ({document.totalPages} trang), vui lòng chọn một trong các gói dưới đây.</p>
+                
+                <div className="mt-6 space-y-4">
+                    {packages.map((pkg) => (
+                        <label key={pkg.id} htmlFor={pkg.id} className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${selectedPackage === pkg.id ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-300' : 'hover:bg-gray-100'}`}>
+                            <input
+                                type="radio"
+                                id={pkg.id}
+                                name="package"
+                                value={pkg.id}
+                                checked={selectedPackage === pkg.id}
+                                onChange={(e) => setSelectedPackage(e.target.value)}
+                                className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            />
+                            <div className="ml-4 flex-grow">
+                                <span className="font-semibold text-gray-800">{pkg.name}</span>
+                                <p className="text-sm text-gray-500">{pkg.description}</p>
                             </div>
-                            <p className="text-sm text-gray-600 mt-2 mb-4">{pkg.description}</p>
-                            <ul className="text-sm space-y-2">
-                                <li className="flex items-center text-gray-700"><CheckCircleIcon className="h-5 w-5 text-green-500 mr-2"/> {key === 'read' ? 'Truy cập 7 ngày' : 'Tải xuống vĩnh viễn'}</li>
-                                <li className="flex items-center text-gray-700"><CheckCircleIcon className="h-5 w-5 text-green-500 mr-2"/> {key === 'read' ? 'Đọc online' : 'Không watermark'}</li>
-                                <li className="flex items-center text-gray-700"><CheckCircleIcon className="h-5 w-5 text-green-500 mr-2"/> {key === 'read' ? 'Hỗ trợ mobile' : 'Chất lượng gốc'}</li>
-                            </ul>
-                        </div>
+                            <span className="text-lg font-bold text-blue-600">
+                                {pkg.price.toLocaleString('vi-VN')} VNĐ
+                            </span>
+                        </label>
                     ))}
                 </div>
             </div>
 
-            {/* 3. Chọn phương thức thanh toán */}
-            <div className="mb-8">
-                 <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center">
-                    <span className="text-white bg-purple-600 rounded-full h-6 w-6 text-sm flex items-center justify-center mr-3">3</span>
-                    Chọn phương thức thanh toán
-                </h3>
-                <div className="flex flex-wrap gap-4">
-                    {['VCB', 'VNPay', 'MoMo'].map(method => (
-                        <div key={method} onClick={() => setSelectedMethod(method)} className={`flex-1 min-w-[120px] p-4 border-2 rounded-lg cursor-pointer flex items-center justify-center transition-all ${selectedMethod === method ? 'border-purple-500 bg-purple-50' : 'border-gray-300 hover:border-purple-400'}`}>
-                           <PaymentMethodIcon method={method} />
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* 4. Tổng kết và nút hành động */}
-            <div className="bg-gray-100 p-4 rounded-lg flex flex-col sm:flex-row items-center justify-between">
-                <div>
-                    <p className="text-sm text-gray-600">Tổng số tiền thanh toán</p>
-                    <p className="text-3xl font-bold text-purple-700">{packageDetails.price.toLocaleString('vi-VN')}{packageDetails.currency}</p>
-                    <p className="text-xs text-gray-500">Đã bao gồm VAT và phí xử lý</p>
-                </div>
-                <div className="flex gap-4 mt-4 sm:mt-0">
-                    <button type="button" onClick={() => alert("Hủy thao tác")} className="px-8 py-3 font-semibold rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300">Hủy bỏ</button>
-                    <button type="button" onClick={handleSubmit} className="px-8 py-3 font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700">Thanh toán</button>
-                </div>
+            <div className="mt-8 text-center">
+                <button 
+                    onClick={handleSelection} 
+                    className="w-full max-w-xs px-8 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+                    disabled={!selectedPackage}
+                >
+                    Tiếp tục
+                </button>
+                <p className="text-xs text-gray-400 mt-3 flex items-center justify-center">
+                    <ShieldCheckIcon className="h-4 w-4 mr-1"/> Giao dịch an toàn và bảo mật.
+                </p>
             </div>
         </div>
     );
