@@ -1,55 +1,83 @@
-import React, { useState, useEffect } from 'react';
-import { CheckCircleIcon } from '@heroicons/react/24/solid';
+import React from 'react';
+import { CheckCircleIcon, ClockIcon, ExclamationCircleIcon, ArrowPathIcon } from '@heroicons/react/24/solid';
 
-const steps = [
-  { name: 'Upload file lên server', duration: 1000 },
-  { name: 'Gọi Flowable API (Auto-route)', duration: 1500 },
-  { name: 'Gán siêu dữ liệu và nhúng watermark', duration: 1000 },
-  { name: 'Kiểm tra điều kiện & kích hoạt workflow', duration: 800 },
-  { name: 'Lưu trữ và tạo bản ghi cuối cùng', duration: 500 },
-];
+const ProcessingSteps = ({ steps }) => {
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'completed':
+        return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
+      case 'processing':
+        return <ArrowPathIcon className="h-5 w-5 text-blue-500 animate-spin" />;
+      case 'pending':
+        return <ClockIcon className="h-5 w-5 text-gray-400" />;
+      case 'error':
+        return <ExclamationCircleIcon className="h-5 w-5 text-red-500" />;
+      default:
+        return <ClockIcon className="h-5 w-5 text-gray-400" />;
+    }
+  };
 
-const ProcessingSteps = () => {
-  const [currentStep, setCurrentStep] = useState(0);
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'completed':
+        return 'Hoàn thành';
+      case 'processing':
+        return 'Đang xử lý';
+      case 'pending':
+        return 'Đang chờ';
+      case 'error':
+        return 'Lỗi';
+      default:
+        return 'Đang chờ';
+    }
+  };
 
-  useEffect(() => {
-    const process = async () => {
-      for (let i = 0; i < steps.length; i++) {
-        await new Promise(resolve => setTimeout(resolve, steps[i].duration));
-        setCurrentStep(i + 1);
-      }
-    };
-    process();
-  }, []);
+  const getStatusClass = (status) => {
+    switch (status) {
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'processing':
+        return 'bg-blue-100 text-blue-800';
+      case 'pending':
+        return 'bg-gray-100 text-gray-800';
+      case 'error':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   return (
-    <div className="bg-white p-8 rounded-lg shadow-lg max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
-        Tiến trình xử lý tự động
-      </h2>
-      <ol className="space-y-4">
+    <div className="mt-4 space-y-3">
+      <h3 className="text-lg font-semibold text-gray-800">Tiến trình xử lý</h3>
+      <div className="space-y-2">
         {steps.map((step, index) => (
-          <li key={index} className="flex items-start">
+          <div key={index} className="flex items-center p-3 bg-white rounded-lg border border-gray-200">
             <div className="flex-shrink-0">
-              {index < currentStep ? (
-                <CheckCircleIcon className="h-6 w-6 text-green-500" />
-              ) : (
-                <div className={`h-6 w-6 rounded-full flex items-center justify-center ${index === currentStep ? 'bg-blue-500 animate-pulse' : 'bg-gray-300'}`}>
-                   {index === currentStep && <div className="h-3 w-3 bg-white rounded-full"></div>}
+              {getStatusIcon(step.status)}
+            </div>
+            <div className="ml-4 flex-1">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-gray-900">{step.name}</p>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(step.status)}`}>
+                  {getStatusText(step.status)}
+                </span>
+              </div>
+              {step.description && (
+                <p className="mt-1 text-sm text-gray-500">{step.description}</p>
+              )}
+              {step.progress !== undefined && step.status === 'processing' && (
+                <div className="mt-2 w-full bg-gray-200 rounded-full h-1.5">
+                  <div 
+                    className="bg-blue-500 h-1.5 rounded-full" 
+                    style={{ width: `${step.progress}%` }}
+                  ></div>
                 </div>
               )}
             </div>
-            <div className="ml-4">
-                <h4 className={`font-semibold ${index < currentStep ? 'text-gray-800' : 'text-gray-500'}`}>
-                    {step.name}
-                </h4>
-                <p className={`text-sm ${index < currentStep ? 'text-green-600' : 'text-gray-400'}`}>
-                    {index < currentStep ? 'Hoàn thành' : (index === currentStep ? 'Đang xử lý...' : 'Chờ xử lý')}
-                </p>
-            </div>
-          </li>
+          </div>
         ))}
-      </ol>
+      </div>
     </div>
   );
 };

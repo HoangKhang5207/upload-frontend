@@ -131,6 +131,7 @@ const UC88_DuplicateCheckPage = () => {
                             <DocumentMagnifyingGlassIcon className="h-16 w-16 mx-auto text-slate-400" />
                             <p className="mt-4 text-xl font-semibold text-slate-700">Chọn 1 file để bắt đầu kiểm tra</p>
                             <p className="mt-2 text-sm text-slate-500">Hệ thống sẽ tự động phân tích ngay sau khi bạn chọn file.</p>
+                            <p className="mt-2 text-xs text-slate-400">Lưu ý: Chỉ file có tên "Dupli-Document" mới được phát hiện là trùng lặp</p>
                         </div>
                     )}
                     
