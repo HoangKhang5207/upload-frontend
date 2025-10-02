@@ -8,75 +8,303 @@ export const mockCheckPermissions = async (user) => {
   console.log("Checking permissions for:", user);
   await new Promise(resolve => setTimeout(resolve, 500));
 
-  // Giả lập trường hợp thành công
-  if (user && user.department.includes("PHONG_HANH_CHINH")) {
-    return {
-      granted: true,
-      message: "Quyền truy cập hợp lệ.",
-      checks: [
-        { name: "RBAC - documents:upload", status: "Granted" },
-        { name: "RBAC - documents:create", status: "Granted" },
-        { name: "ABAC - Department", status: "Valid" },
-        { name: "ABAC - Position", status: "Valid" },
-      ],
-    };
-  }
-
-  // Giả lập trường hợp thất bại
+  // Giả lập trường hợp thành công - luôn cho phép upload
   return {
-    granted: false,
-    message: "403: Insufficient permissions. Không đủ quyền để tải lên.",
+    granted: true,
+    message: "Quyền truy cập hợp lệ.",
     checks: [
-        { name: "RBAC - documents:upload", status: "Denied" },
+      { name: "RBAC - documents:upload", status: "Granted" },
+      { name: "RBAC - documents:create", status: "Granted" },
+      { name: "ABAC - Department", status: "Valid" },
+      { name: "ABAC - Position", status: "Valid" },
     ],
   };
 };
 
+/**
+ * Hàm kiểm tra mâu thuẫn dữ liệu chi tiết
+ */
+export const checkDataConflicts = (keyValues) => {
+    const conflicts = [];
+    
+    // Kiểm tra số lượng âm
+    if (keyValues["Số lượng"] !== undefined && keyValues["Số lượng"] < 0) {
+        conflicts.push({
+            field: "Số lượng",
+            value: keyValues["Số lượng"],
+            message: "Số lượng không thể là số âm"
+        });
+    }
+    
+    // Kiểm tra giá trị âm
+    if (keyValues["Giá trị"] !== undefined && keyValues["Giá trị"] < 0) {
+        conflicts.push({
+            field: "Giá trị",
+            value: keyValues["Giá trị"],
+            message: "Giá trị không thể là số âm"
+        });
+    }
+    
+    // Kiểm tra ngày vượt quá 20/08/2025
+    if (keyValues["Ngày ban hành"]) {
+        const datePattern = /(\d{2})\/(\d{2})\/(\d{4})/;
+        const match = keyValues["Ngày ban hành"].match(datePattern);
+        if (match) {
+            const day = parseInt(match[1], 10);
+            const month = parseInt(match[2], 10) - 1; // JavaScript months are 0-indexed
+            const year = parseInt(match[3], 10);
+            const documentDate = new Date(year, month, day);
+            const cutoffDate = new Date(2025, 7, 20); // 20/08/2025
+            
+            if (documentDate > cutoffDate) {
+                conflicts.push({
+                    field: "Ngày ban hành",
+                    value: keyValues["Ngày ban hành"],
+                    message: "Ngày ban hành không thể vượt quá 20/08/2025"
+                });
+            }
+        }
+    }
+    
+    return conflicts;
+};
+
+// --- Các hàm xử lý riêng biệt ---
+
+/**
+ * Hàm giả lập OCR processing
+ */
+// export const mockOcrProcessing = async (file) => {
+//     console.log("Processing OCR for file:", file.name);
+//     // Giả lập thời gian xử lý OCR
+//     await new Promise(resolve => setTimeout(resolve, 1500));
+    
+//     // Kiểm tra loại file để xử lý phù hợp
+//     const fileName = file.name.toLowerCase();
+//     const isVideo = fileName.endsWith('.mp4') || fileName.endsWith('.avi');
+//     const isAudio = fileName.endsWith('.mp3') || fileName.endsWith('.wav');
+    
+//     // Nếu là video hoặc audio, xử lý trích xuất văn bản từ âm thanh
+//     if (isVideo || isAudio) {
+//         const transcript = isVideo 
+//             ? "Cuộc họp phòng kinh doanh ngày 15/08/2025. Hôm nay chúng ta sẽ thảo luận về báo cáo tài chính quý III..."
+//             : "Bản ghi âm cuộc gọi với khách hàng. Khách hàng yêu cầu cung cấp báo cáo tài chính quý III năm 2025...";
+        
+//         return {
+//             success: true,
+//             ocrContent: transcript,
+//         };
+//     }
+    
+//     // Giả lập kết quả OCR cho file hình ảnh/PDF
+//     return {
+//         success: true,
+//         ocrContent: `BÁO CÁO TÀI CHÍNH QUẢN LÝ\nCÔNG TY INNOTECH\nQuý III năm 2025\nNgày ban hành: 15/08/2025...`,
+//     };
+// };
+
+/**
+ * Hàm giả lập kiểm tra trùng lặp
+ * Chỉ phát hiện trùng lặp nếu tên file là "Dupli-Document" (bất kể đuôi file)
+ */
+// export const mockDuplicateCheck = async (file, checkDuplicates = true) => {
+//     console.log("Checking duplicates for file:", file.name, "with checkDuplicates:", checkDuplicates);
+//     // Giả lập thời gian kiểm tra trùng lặp
+//     await new Promise(resolve => setTimeout(resolve, 1000));
+    
+//     // Kiểm tra xem tên file có chứa "Dupli-Document" không (không phân biệt đuôi)
+//     const fileNameWithoutExtension = file.name.replace(/\.[^/.]+$/, "");
+//     const isDuplicateFile = fileNameWithoutExtension === "Dupli-Document";
+    
+//     // Nếu bật kiểm tra trùng lặp và file có tên "Dupli-Document", giả lập phát hiện trùng lặp
+//     if (checkDuplicates && isDuplicateFile) {
+//         return {
+//             success: false,
+//             error: "409: Duplicate or conflicting document detected",
+//             duplicateData: {
+//                 similarity: "95%",
+//                 existingDocument: {
+//                     name: "Tài liệu mẫu đã tồn tại.pdf",
+//                     id: "DOC99999"
+//                 }
+//             }
+//         };
+//     }
+    
+//     // Không tìm thấy trùng lặp
+//     return {
+//         success: true,
+//     };
+// };
+
+/**
+ * Hàm giả lập gợi ý metadata
+ */
+// export const mockMetadataSuggestion = async (file, ocrContent) => {
+//     console.log("Suggesting metadata for file:", file.name);
+//     // Giả lập thời gian gợi ý metadata
+//     await new Promise(resolve => setTimeout(resolve, 1200));
+    
+//     const keyValues = {
+//         "Số lượng": 1250,
+//         "Ngày ban hành": "15/08/2025",
+//         "Tác giả": null, // Giá trị thiếu
+//         "Giá trị": -500, // Giá trị mâu thuẫn
+//     };
+    
+//     return {
+//         suggestedMetadata: {
+//             title: file.name.replace(/\.[^/.]+$/, ""), // Bỏ đuôi file
+//             tags: "tài chính, báo cáo, quarterly, 2025",
+//             category: 1, // Giả sử ID của "Báo cáo tài chính"
+//             key_values: keyValues
+//         }
+//     };
+// };
+
+/**
+ * Hàm giả lập kiểm tra dữ liệu
+ */
+export const mockDataValidation = async (keyValues) => {
+    console.log("Validating data");
+    // Giả lập thời gian kiểm tra dữ liệu
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    // Kiểm tra mâu thuẫn dữ liệu
+    const conflicts = checkDataConflicts(keyValues);
+    
+    return {
+        warnings: [
+            { field: "Tác giả", message: "Không xác định được tác giả từ nội dung." },
+            ...conflicts.map(conflict => ({
+                field: conflict.field,
+                message: conflict.message
+            }))
+        ]
+    };
+};
+
+/**
+ * Hàm giả lập nhúng watermark
+ */
+// export const mockEmbedWatermark = async (file) => {
+//     console.log("Embedding watermark for file:", file.name);
+//     // Giả lập thời gian nhúng watermark
+//     await new Promise(resolve => setTimeout(resolve, 1000));
+    
+//     // Trả về thông báo thành công
+//     return {
+//         success: true,
+//         message: "Đã nhúng watermark vào tài liệu thành công",
+//         watermarkedFile: {
+//             name: `${file.name.replace(/\.[^/.]+$/, "")}_watermarked${file.name.match(/\.[^/.]+$/)[0]}`,
+//             size: file.size * 1.05 // Kích thước tăng nhẹ do watermark
+//         }
+//     };
+// };
 
 /**
  * BƯỚC 3 & 3.1: Giả lập toàn bộ quá trình xử lý backend sau khi file được tải lên
  * Bao gồm OCR, kiểm tra trùng lặp, gợi ý metadata.
+ * @param {File} file - File được tải lên
+ * @param {boolean} checkDuplicates - Nếu true, thực hiện kiểm tra trùng lặp; nếu false, bỏ qua kiểm tra
  */
-export const mockProcessFile = async (file) => {
+export const mockProcessFile = async (file, checkDuplicates = true) => {
     console.log("Processing file:", file.name);
-    // Giả lập thời gian xử lý
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    console.log("checkDuplicates parameter value:", checkDuplicates);
     
-    const isDuplicate = Math.random() > 0.7; // 30% tỷ lệ trùng
+    try {
+        // Step 1: OCR Processing
+        const ocrResult = await mockOcrProcessing(file);
+        if (!ocrResult.success) {
+            throw new Error("OCR processing failed");
+        }
+        
+        // Step 2: Duplicate Check
+        const duplicateResult = await mockDuplicateCheck(file, checkDuplicates);
+        if (!duplicateResult.success) {
+            return duplicateResult; // Return duplicate error immediately
+        }
+        
+        // Step 3: Metadata Suggestion
+        const metadataResult = await mockMetadataSuggestion(file, ocrResult.ocrContent);
+        
+        // Step 4: Data Validation
+        const validationResult = await mockDataValidation(metadataResult.suggestedMetadata.key_values);
+        
+        // Step 5: Embed Watermark (always successful in mock)
+        const watermarkResult = await mockEmbedWatermark(file);
+        
+        // Combine all results
+        return {
+            success: true,
+            ocrContent: ocrResult.ocrContent,
+            suggestedMetadata: metadataResult.suggestedMetadata,
+            warnings: validationResult.warnings,
+            watermarkInfo: watermarkResult
+        };
+    } catch (error) {
+        console.error("Error processing file:", error);
+        return {
+            success: false,
+            error: "Có lỗi xảy ra trong quá trình xử lý file: " + error.message
+        };
+    }
+};
+
+/**
+ * Xử lý file audio/video để trích xuất văn bản
+ */
+const processAudioVideoFile = async (file, isVideo, checkDuplicates = true) => {
+    // Giả lập thời gian xử lý audio/video
+    await new Promise(resolve => setTimeout(resolve, 4000));
     
-    if (isDuplicate) {
+    // Kiểm tra xem tên file có chứa "Dupli-Document" không (không phân biệt đuôi)
+    const fileNameWithoutExtension = file.name.replace(/\.[^/.]+$/, "");
+    const isDuplicateFile = fileNameWithoutExtension === "Dupli-Document";
+    
+    // Nếu bật kiểm tra trùng lặp và file có tên "Dupli-Document", giả lập phát hiện trùng lặp
+    if (checkDuplicates && isDuplicateFile) {
         return {
             success: false,
             error: "409: Duplicate or conflicting document detected",
             duplicateData: {
-                similarity: "35%",
+                similarity: "95%",
                 existingDocument: {
-                    name: "Bao_cao_tai_chinh_Q2_2025.pdf",
-                    id: "DOC12345"
+                    name: "Tài liệu mẫu đã tồn tại.pdf",
+                    id: "DOC99999"
                 }
             }
         };
     }
-
-    // Giả lập kết quả xử lý thành công
+    
+    // Giả lập kết quả trích xuất văn bản từ audio/video
+    const transcript = isVideo 
+        ? "Cuộc họp phòng kinh doanh ngày 15/08/2025. Hôm nay chúng ta sẽ thảo luận về báo cáo tài chính quý III..."
+        : "Bản ghi âm cuộc gọi với khách hàng. Khách hàng yêu cầu cung cấp báo cáo tài chính quý III năm 2025...";
+    
+    const keyValues = {
+        "Ngày": "15/08/2025",
+        "Phòng ban": isVideo ? "Kinh doanh" : "Khách hàng",
+        "Loại nội dung": isVideo ? "Cuộc họp" : "Cuộc gọi",
+    };
+    
+    // Kiểm tra mâu thuẫn dữ liệu
+    const conflicts = checkDataConflicts(keyValues);
+    
     return {
         success: true,
-        ocrContent: `BÁO CÁO TÀI CHÍNH QUẢN LÝ\nCÔNG TY INNOTECH\nQuý III năm 2025\nNgày ban hành: 15/08/2025...`,
+        ocrContent: transcript,
         suggestedMetadata: {
-            title: file.name.replace(/\.[^/.]+$/, ""), // Bỏ đuôi file
-            tags: "tài chính, báo cáo, quarterly, 2025",
-            category: 1, // Giả sử ID của "Báo cáo tài chính"
-            key_values: {
-                "Số lượng": 1250,
-                "Ngày ban hành": "15/08/2025",
-                "Tác giả": null, // Giá trị thiếu
-                "Giá trị": -500, // Giá trị mâu thuẫn
-            }
+            title: file.name.replace(/\.[^/.]+$/, ""),
+            tags: isVideo ? "cuộc họp, video, kinh doanh" : "cuộc gọi, audio, khách hàng",
+            category: isVideo ? 3 : 5, // Giả sử ID 3 là "Cuộc họp", ID 5 là "Cuộc gọi"
+            key_values: keyValues
         },
-        warnings: [
-            { field: "Tác giả", message: "Không xác định được tác giả từ nội dung." },
-            { field: "Giá trị", message: "Số âm không hợp lệ." },
-        ]
+        warnings: conflicts.map(conflict => ({
+            field: conflict.field,
+            message: conflict.message
+        }))
     };
 };
 
@@ -88,13 +316,31 @@ export const mockProcessFile = async (file) => {
 //     await new Promise(resolve => setTimeout(resolve, 1500));
 
 //     const docId = 'DOC-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+// export const mockFinalizeUpload = async (file, metadata) => {
+//     console.log("Finalizing upload for:", file.name, "with metadata:", metadata);
+//     await new Promise(resolve => setTimeout(resolve, 1500));
+
+//     // Nhúng watermark vào file
+//     const watermarkResult = await mockEmbedWatermark(file);
     
+//     const docId = 'DOC-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+    
+// //     let response = {
+// //         success: true,
+// //         message: "Upload thành công!",
+// //         document: {
+// //             title: metadata.title,
+// //             doc_id: docId,
+// //             version: "1.0",
+// //             status: "DRAFT",
+// //         }
+// //     };
 //     let response = {
 //         success: true,
 //         message: "Upload thành công!",
 //         document: {
 //             title: metadata.title,
-//             doc_id: docId,
+//             docId: docId,
 //             version: "1.0",
 //             status: "DRAFT",
 //         }
@@ -113,10 +359,21 @@ export const mockProcessFile = async (file) => {
 //         response.document.public_link = `https://dms.innotech.vn/share/${docId}`;
 //     }
 
+// //     // Tích hợp UC-85
+// //     if(metadata.accessType === 'paid') {
+// //         response.document.payment_required = true;
+// //     }
 //     // Tích hợp UC-85
 //     if(metadata.accessType === 'paid') {
 //         response.document.payment_required = true;
 //     }
+    
+//     // Thêm thông tin watermark
+//     response.watermarkInfo = {
+//         success: watermarkResult.success,
+//         message: watermarkResult.message,
+//         watermarkedFile: watermarkResult.watermarkedFile
+//     };
     
 //     return response;
 // }
@@ -124,13 +381,27 @@ export const mockProcessFile = async (file) => {
 /**
  * UC-88: Giả lập API kiểm tra trùng lặp chuyên sâu
  * Trả về danh sách các tài liệu có khả năng trùng lặp.
+ * Chỉ phát hiện trùng lặp nếu tên file là "Dupli-Document" (bất kể đuôi file)
  */
 export const mockDeepDuplicateCheck = async (file) => {
     console.log(`[UC-88] Performing deep duplicate check for: ${file.name}`);
     // Giả lập thời gian xử lý phức tạp (hashing, indexing, comparing...)
     await new Promise(resolve => setTimeout(resolve, 2500));
 
-    // Giả lập các kịch bản kết quả khác nhau
+    // Kiểm tra xem tên file có chứa "Dupli-Document" không (không phân biệt đuôi)
+    const fileNameWithoutExtension = file.name.replace(/\.[^/.]+$/, "");
+    const isDuplicateFile = fileNameWithoutExtension === "Dupli-Document";
+
+    // Nếu không phải file "Dupli-Document", không tìm thấy trùng lặp
+    if (!isDuplicateFile) {
+        return {
+            hasDuplicates: false,
+            message: "Không tìm thấy tài liệu nào trùng lặp.",
+            duplicates: [],
+        };
+    }
+
+    // Giả lập các kịch bản kết quả khác nhau cho file "Dupli-Document"
     const randomScenario = Math.random();
 
     if (randomScenario < 0.2) { // 20% không tìm thấy trùng lặp
@@ -148,7 +419,7 @@ export const mockDeepDuplicateCheck = async (file) => {
         duplicates: [
             {
                 id: "DOC-A1B2C3D4",
-                name: "Bao_cao_tai_chinh_Q3_2025_final.pdf",
+                name: "Dupli-Document-sample.pdf",
                 similarity: 98.5, // Giống gần như hoàn toàn
                 type: "exact_match", // hash, content
                 owner: "Nguyen Van A",
@@ -157,7 +428,7 @@ export const mockDeepDuplicateCheck = async (file) => {
             },
             {
                 id: "DOC-X9Y8Z7W6",
-                name: "Q3_Financial_Statement_draft_v2.docx",
+                name: "Dupli-Document-draft-v2.docx",
                 similarity: 76.2, // Tương đồng cao về nội dung
                 type: "content_similarity", // semantic, keyword
                 owner: "Tran Thi B",
@@ -168,7 +439,7 @@ export const mockDeepDuplicateCheck = async (file) => {
             ...(randomScenario >= 0.7 ? [
                 {
                     id: "DOC-K5L6M7N8",
-                    name: "financial_report_q3_summary.pdf",
+                    name: "Dupli-Document-summary.pdf",
                     similarity: 55.8,
                     type: "content_similarity",
                     owner: "Le Van C",
@@ -177,7 +448,7 @@ export const mockDeepDuplicateCheck = async (file) => {
                 },
                 {
                     id: "DOC-P1Q2R3S4",
-                    name: "BaoCaoTaiChinh_Q3_2025.pdf",
+                    name: "Dupli-Document-final.pdf",
                     similarity: 99.1, // Trùng lặp về tên file
                     type: "filename_match",
                     owner: "Nguyen Van A",
@@ -198,13 +469,59 @@ export const mockOcrProcess = async (file) => {
     // Giả lập thời gian xử lý OCR
     await new Promise(resolve => setTimeout(resolve, 3500));
 
+    // Kiểm tra loại file để xử lý phù hợp
+    const fileName = file.name.toLowerCase();
+    const isVideo = fileName.endsWith('.mp4') || fileName.endsWith('.avi');
+    const isAudio = fileName.endsWith('.mp3') || fileName.endsWith('.wav');
+    
+    // Nếu là video hoặc audio, xử lý trích xuất văn bản từ âm thanh
+    if (isVideo || isAudio) {
+        const transcript = isVideo 
+            ? "Cuộc họp phòng kinh doanh ngày 15/08/2025. Hôm nay chúng ta sẽ thảo luận về báo cáo tài chính quý III..."
+            : "Bản ghi âm cuộc gọi với khách hàng. Khách hàng yêu cầu cung cấp báo cáo tài chính quý III năm 2025...";
+        
+        return {
+            success: true,
+            processingTime: 4.2, // seconds
+            confidence: 92.5, // %
+            language: "Vietnamese (vi)",
+            extractedText: transcript,
+            keyValuePairs: [
+                { key: "Ngày", value: "15/08/2025", confidence: 98.0 },
+                { key: "Phòng ban", value: isVideo ? "Kinh doanh" : "Khách hàng", confidence: 95.0 },
+                { key: "Loại nội dung", value: isVideo ? "Cuộc họp" : "Cuộc gọi", confidence: 90.0 },
+            ],
+            tables: [],
+            warnings: [
+                "Đây là trích xuất từ âm thanh, độ chính xác có thể thay đổi tùy chất lượng audio.",
+            ]
+        };
+    }
+
     // Giả lập kết quả OCR cho một file hợp đồng lao động
     return {
         success: true,
         processingTime: 3.45, // seconds
         confidence: 96.8, // %
         language: "Vietnamese (vi)",
-        extractedText: `CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM\nĐộc lập - Tự do - Hạnh phúc\n\nHỢP ĐỒNG LAO ĐỘNG\nSố: 123/2025/HĐLĐ-INNOTECH\n\nHôm nay, ngày 01 tháng 02 năm 2024, tại văn phòng Công ty TNHH INNOTECH Việt Nam, chúng tôi gồm:\nBÊN A: CÔNG TY TNHH INNOTECH VIỆT NAM\n- Địa chỉ: 123 Đường Nguyễn Văn Cừ, Quận 5, TP.HCM\n...\nBÊN B: NGƯỜI LAO ĐỘNG\n- Họ và tên: Trần Thị Lan Anh\n- Ngày sinh: 15/03/1990\n...\nĐIỀU 3: MỨC LƯƠNG VÀ PHÚC LỢI\n- Lương cơ bản: 25.000.000 VNĐ/tháng\n- Phụ cấp: 2.000.000 VNĐ/tháng\n...`,
+        extractedText: `CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+Độc lập - Tự do - Hạnh phúc
+
+HỢP ĐỒNG LAO ĐỘNG
+Số: 123/2025/HĐLĐ-INNOTECH
+
+Hôm nay, ngày 01 tháng 02 năm 2024, tại văn phòng Công ty TNHH INNOTECH Việt Nam, chúng tôi gồm:
+BÊN A: CÔNG TY TNHH INNOTECH VIỆT NAM
+- Địa chỉ: 123 Đường Nguyễn Văn Cừ, Quận 5, TP.HCM
+...
+BÊN B: NGƯỜI LAO ĐỘNG
+- Họ và tên: Trần Thị Lan Anh
+- Ngày sinh: 15/03/1990
+...
+ĐIỀU 3: MỨC LƯƠNG VÀ PHÚC LỢI
+- Lương cơ bản: 25.000.000 VNĐ/tháng
+- Phụ cấp: 2.000.000 VNĐ/tháng
+...`,
         keyValuePairs: [
             { key: "Số hợp đồng", value: "123/2025/HĐLĐ-INNOTECH", confidence: 99.5 },
             { key: "Ngày ký", value: "01/02/2024", confidence: 98.2 },

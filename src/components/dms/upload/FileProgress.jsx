@@ -2,7 +2,7 @@ import React from 'react';
 import { DocumentTextIcon, XCircleIcon } from '@heroicons/react/24/solid';
 
 const FileProgress = ({ file, progress, onRemove }) => (
-    <div className="mt-4 bg-slate-100 p-4 rounded-lg border border-slate-200">
+    <div className="mt-4 bg-slate-50 p-4 rounded-lg border border-slate-200 shadow-sm">
         <div className="flex items-center justify-between">
             <div className="flex items-center">
                 <DocumentTextIcon className="h-10 w-10 text-slate-500" />
@@ -15,10 +15,18 @@ const FileProgress = ({ file, progress, onRemove }) => (
                 <XCircleIcon className="h-6 w-6" />
             </button>
         </div>
-        <div className="mt-2 w-full bg-slate-200 rounded-full h-2.5">
-            <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-2.5 rounded-full" style={{ width: `${progress}%` }}></div>
+        <div className="mt-3">
+            <div className="flex justify-between text-sm text-slate-600 mb-1">
+                <span>Đang tải lên</span>
+                <span>{Math.round(progress)}%</span>
+            </div>
+            <div className="w-full bg-slate-200 rounded-full h-2.5">
+                <div 
+                    className="bg-gradient-to-r from-blue-500 to-purple-500 h-2.5 rounded-full transition-all duration-300 ease-out" 
+                    style={{ width: `${progress}%` }}
+                ></div>
+            </div>
         </div>
-        <p className="text-right text-sm text-slate-600 mt-1">{Math.round(progress)}%</p>
     </div>
 );
 
