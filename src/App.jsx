@@ -5,12 +5,15 @@ import MainLayout from './components/layout/MainLayout';
 import HomePage from './pages/HomePage';
 
 // --- Use Case Pages ---
-import UC39_UploadPage from './pages/UC39_UploadPage';
-import UC73_SuggestMetadataPage from './pages/UC73_SuggestMetadataPage';
-import UC84_AutoRoutePage from './pages/UC84_AutoRoutePage';
-import UC87_OcrProcessingPage from './pages/UC87_OcrProcessingPage';
-import UC88_DuplicateCheckPage from './pages/UC88_DuplicateCheckPage';
+import UC39_UploadPage from './pages/upload/UC39_UploadPage';
+import UC73_SuggestMetadataPage from './pages/upload/UC73_SuggestMetadataPage';
+import UC84_AutoRoutePage from './pages/upload/UC84_AutoRoutePage';
+import UC87_OcrProcessingPage from './pages/upload/UC87_OcrProcessingPage';
+import UC88_DuplicateCheckPage from './pages/upload/UC88_DuplicateCheckPage';
 import DocumentAccessPage from './pages/DocumentAccessPage'; // Trang gộp UC-85 & UC-86
+
+// --- (MỚI) Import UploadProvider ---
+import { UploadProvider } from './contexts/UploadContext';
 
 function App() {
   return (
@@ -20,8 +23,15 @@ function App() {
         <Route element={<MainLayout />}>
           <Route path="/" element={<HomePage />} />
           
-          {/* Trang tổng hợp quy trình Upload */}
-          <Route path="/uc39-upload-workflow" element={<UC39_UploadPage />} />
+          {/* (CẬP NHẬT) Bọc UC39_UploadPage bằng UploadProvider */}
+          <Route 
+            path="/uc39-upload-workflow" 
+            element={
+              <UploadProvider>
+                <UC39_UploadPage />
+              </UploadProvider>
+            } 
+          />
 
           {/* Các trang demo tính năng riêng lẻ */}
           <Route path="/uc73-suggest-metadata" element={<UC73_SuggestMetadataPage />} />

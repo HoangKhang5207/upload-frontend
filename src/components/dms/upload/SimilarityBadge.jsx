@@ -1,19 +1,15 @@
 import React from 'react';
 
 const SimilarityBadge = ({ score }) => {
-    let bgColor, textColor, text;
-    if (score > 95) {
-        bgColor = 'bg-red-100'; textColor = 'text-red-800'; text = 'Trùng khớp cao';
-    } else if (score > 70) {
-        bgColor = 'bg-orange-100'; textColor = 'text-orange-800'; text = 'Tương đồng';
+    let bgColor, text;
+    if (score > 90) {
+        bgColor = 'bg-red-100 text-red-800'; text = `${score.toFixed(2)}%`;
+    } else if (score > 30) {
+        bgColor = 'bg-yellow-100 text-yellow-800'; text = `${score.toFixed(2)}%`;
     } else {
-        bgColor = 'bg-yellow-100'; textColor = 'text-yellow-800'; text = 'Liên quan';
+        bgColor = 'bg-green-100 text-green-800'; text = `${score.toFixed(2)}%`;
     }
-    return (
-        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${bgColor} ${textColor}`}>
-            {text} ({score}%)
-        </span>
-    );
+    return <span className={`px-3 py-1 text-sm font-bold rounded-full ${bgColor}`}>{text}</span>;
 };
 
 export default SimilarityBadge;

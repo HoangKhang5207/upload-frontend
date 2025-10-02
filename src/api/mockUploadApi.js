@@ -83,43 +83,43 @@ export const mockProcessFile = async (file) => {
 /**
  * BƯỚC 5, 6, 7: Giả lập việc lưu trữ và trả về kết quả cuối cùng
  */
-export const mockFinalizeUpload = async (file, metadata) => {
-    console.log("Finalizing upload for:", file.name, "with metadata:", metadata);
-    await new Promise(resolve => setTimeout(resolve, 1500));
+// export const mockFinalizeUpload = async (file, metadata) => {
+//     console.log("Finalizing upload for:", file.name, "with metadata:", metadata);
+//     await new Promise(resolve => setTimeout(resolve, 1500));
 
-    const docId = 'DOC-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+//     const docId = 'DOC-' + Math.random().toString(36).substr(2, 9).toUpperCase();
     
-    let response = {
-        success: true,
-        message: "Upload thành công!",
-        document: {
-            title: metadata.title,
-            doc_id: docId,
-            version: "1.0",
-            status: "DRAFT",
-        }
-    };
+//     let response = {
+//         success: true,
+//         message: "Upload thành công!",
+//         document: {
+//             title: metadata.title,
+//             doc_id: docId,
+//             version: "1.0",
+//             status: "DRAFT",
+//         }
+//     };
 
-    // Tích hợp UC-84
-    if (metadata.category === 1) { // Giả sử ID 1 là "Báo cáo tài chính"
-        response.autoRouteInfo = {
-            message: "Đã chuyển đến phòng Tài chính để duyệt",
-            workflowName: "Duyệt Báo Cáo Tài Chính"
-        };
-    }
+//     // Tích hợp UC-84
+//     if (metadata.category === 1) { // Giả sử ID 1 là "Báo cáo tài chính"
+//         response.autoRouteInfo = {
+//             message: "Đã chuyển đến phòng Tài chính để duyệt",
+//             workflowName: "Duyệt Báo Cáo Tài Chính"
+//         };
+//     }
     
-    // Tích hợp UC-86
-    if(metadata.accessType === 'public') {
-        response.document.public_link = `https://dms.innotech.vn/share/${docId}`;
-    }
+//     // Tích hợp UC-86
+//     if(metadata.accessType === 'public') {
+//         response.document.public_link = `https://dms.innotech.vn/share/${docId}`;
+//     }
 
-    // Tích hợp UC-85
-    if(metadata.accessType === 'paid') {
-        response.document.payment_required = true;
-    }
+//     // Tích hợp UC-85
+//     if(metadata.accessType === 'paid') {
+//         response.document.payment_required = true;
+//     }
     
-    return response;
-}
+//     return response;
+// }
 
 /**
  * UC-88: Giả lập API kiểm tra trùng lặp chuyên sâu
@@ -280,56 +280,376 @@ export const mockSuggestMetadata = async (file) => {
  * UC-84: Giả lập API kiểm tra và kích hoạt quy trình tự động (Auto-Route).
  * Dựa trên metadata để tìm và bắt đầu một workflow.
  */
-export const mockTriggerAutoRoute = async (file, metadata) => {
-    console.log(`[UC-84] Checking auto-route rules for: ${file.name} with metadata:`, metadata);
-    await new Promise(resolve => setTimeout(resolve, 1500));
+// export const mockTriggerAutoRoute = async (file, metadata) => {
+//     console.log(`[UC-84] Checking auto-route rules for: ${file.name} with metadata:`, metadata);
+//     await new Promise(resolve => setTimeout(resolve, 1500));
 
-    const { category, title } = metadata;
+//     const { category, title } = metadata;
 
-    // RULE 1: Hợp đồng (category=2) -> Gửi cho Trưởng phòng Pháp lý
-    if (category === "2") { // Giả sử ID 2 là "Hợp đồng"
-        return {
-            success: true,
-            triggered: true,
-            workflow: {
-                name: "Quy trình duyệt Hợp đồng",
-                id: "WF-CONTRACT-01",
-                steps: [
-                    { name: "Tải lên", status: "completed", user: "Người dùng", date: new Date().toISOString() },
-                    { name: "Gửi đến Phòng Pháp lý", status: "completed", user: "Hệ thống", date: new Date().toISOString() },
-                    { name: "Chờ duyệt bởi TP Pháp lý", status: "pending", user: "Lê Minh Tuấn", date: null },
-                    { name: "Lưu trữ", status: "upcoming", user: null, date: null }
-                ]
-            },
-            message: "Đã tự động gửi tài liệu đến quy trình duyệt Hợp đồng.",
-        };
+//     // RULE 1: Hợp đồng (category=2) -> Gửi cho Trưởng phòng Pháp lý
+//     if (category === "2") { // Giả sử ID 2 là "Hợp đồng"
+//         return {
+//             success: true,
+//             triggered: true,
+//             workflow: {
+//                 name: "Quy trình duyệt Hợp đồng",
+//                 id: "WF-CONTRACT-01",
+//                 steps: [
+//                     { name: "Tải lên", status: "completed", user: "Người dùng", date: new Date().toISOString() },
+//                     { name: "Gửi đến Phòng Pháp lý", status: "completed", user: "Hệ thống", date: new Date().toISOString() },
+//                     { name: "Chờ duyệt bởi TP Pháp lý", status: "pending", user: "Lê Minh Tuấn", date: null },
+//                     { name: "Lưu trữ", status: "upcoming", user: null, date: null }
+//                 ]
+//             },
+//             message: "Đã tự động gửi tài liệu đến quy trình duyệt Hợp đồng.",
+//         };
+//     }
+
+//     // RULE 2: Báo cáo tài chính (category=1) -> Gửi cho Kế toán trưởng
+//     if (category === "1") { // Giả sử ID 1 là "Báo cáo tài chính"
+//         return {
+//             success: true,
+//             triggered: true,
+//             workflow: {
+//                 name: "Quy trình duyệt Báo cáo Tài chính",
+//                 id: "WF-FINANCE-03",
+//                 steps: [
+//                     { name: "Tải lên", status: "completed", user: "Người dùng", date: new Date().toISOString() },
+//                     { name: "Gửi đến Phòng Kế toán", status: "completed", user: "Hệ thống", date: new Date().toISOString() },
+//                     { name: "Chờ duyệt bởi Kế toán trưởng", status: "pending", user: "Phan Thị Hoa", date: null },
+//                     { name: "Phê duyệt cuối cùng bởi Giám đốc", status: "upcoming", user: "Nguyễn Văn Nam", date: null },
+//                     { name: "Lưu trữ", status: "upcoming", user: null, date: null }
+//                 ]
+//             },
+//             message: "Đã tự động gửi tài liệu đến quy trình duyệt Báo cáo Tài chính.",
+//         };
+//     }
+
+//     // NO MATCHING RULE
+//     return {
+//         success: true,
+//         triggered: false,
+//         workflow: null,
+//         message: "Tải lên thành công. Không tìm thấy quy trình tự động nào phù hợp. Tài liệu sẽ được lưu vào thư mục 'Chờ xử lý'.",
+//     };
+// };
+
+
+// --- HELPER FUNCTIONS ---
+
+
+/**
+ * Hàm giả lập độ trễ mạng
+ * @param {number} ms - Thời gian chờ (mili giây)
+ */
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * (MỚI & QUAN TRỌNG) Hàm kiểm tra mâu thuẫn dữ liệu chi tiết
+ * Dựa trên yêu cầu từ file "phan_loai_key_value_trich_xuat.pdf" và "Các Use Case về Upload tài liệu-v4.docx".
+ * @param {object} keyValues - Các cặp key-value được trích xuất
+ * @returns {{hasConflicts: boolean, conflicts: Array<{field: string, value: any, message: string}>}}
+ */
+export const mockDataConflictCheck = (keyValues) => {
+    console.log("[UC-39 | MOCK] Checking for data conflicts:", keyValues);
+    const conflicts = [];
+
+    // Rule 1: Số lượng không được âm
+    if (keyValues["Số lượng"] !== undefined && keyValues["Số lượng"] < 0) {
+        conflicts.push({
+            field: "Số lượng",
+            value: keyValues["Số lượng"],
+            message: "Số lượng không thể là giá trị âm."
+        });
     }
 
-    // RULE 2: Báo cáo tài chính (category=1) -> Gửi cho Kế toán trưởng
-    if (category === "1") { // Giả sử ID 1 là "Báo cáo tài chính"
-        return {
-            success: true,
-            triggered: true,
-            workflow: {
-                name: "Quy trình duyệt Báo cáo Tài chính",
-                id: "WF-FINANCE-03",
-                steps: [
-                    { name: "Tải lên", status: "completed", user: "Người dùng", date: new Date().toISOString() },
-                    { name: "Gửi đến Phòng Kế toán", status: "completed", user: "Hệ thống", date: new Date().toISOString() },
-                    { name: "Chờ duyệt bởi Kế toán trưởng", status: "pending", user: "Phan Thị Hoa", date: null },
-                    { name: "Phê duyệt cuối cùng bởi Giám đốc", status: "upcoming", user: "Nguyễn Văn Nam", date: null },
-                    { name: "Lưu trữ", status: "upcoming", user: null, date: null }
-                ]
-            },
-            message: "Đã tự động gửi tài liệu đến quy trình duyệt Báo cáo Tài chính.",
-        };
+    // Rule 2: Ngày ban hành không được vượt quá 20/08/2025
+    if (keyValues["Ngày ban hành"]) {
+        const datePattern = /(\d{2})\/(\d{2})\/(\d{4})/;
+        const match = keyValues["Ngày ban hành"].match(datePattern);
+        if (match) {
+            const day = parseInt(match[1], 10);
+            const month = parseInt(match[2], 10) - 1; // Tháng trong JS bắt đầu từ 0
+            const year = parseInt(match[3], 10);
+            const documentDate = new Date(year, month, day);
+            const cutoffDate = new Date(2025, 7, 20); // 20/08/2025
+
+            if (documentDate > cutoffDate) {
+                conflicts.push({
+                    field: "Ngày ban hành",
+                    value: keyValues["Ngày ban hành"],
+                    message: `Ngày ban hành (${keyValues["Ngày ban hành"]}) không hợp lệ, vượt quá ngày giới hạn 20/08/2025.`
+                });
+            }
+        }
+    }
+    
+    // Rule 3: Số hiệu không hợp lệ (ví dụ)
+    if (keyValues["Số hiệu"] && !keyValues["Số hiệu"].includes('/')) {
+        conflicts.push({
+            field: "Số hiệu",
+            value: keyValues["Số hiệu"],
+            message: "Định dạng số hiệu văn bản có vẻ không đúng chuẩn (thường có dạng 'Số/Năm/Ký hiệu')."
+        });
     }
 
-    // NO MATCHING RULE
+    return {
+        hasConflicts: conflicts.length > 0,
+        conflicts: conflicts
+    };
+};
+
+
+// --- INDIVIDUAL MOCK API FUNCTIONS (Mô phỏng từng microservice) ---
+
+/**
+ * (MỚI) BƯỚC 3: Giả lập khử nhiễu ảnh bằng AI
+ * Dựa trên yêu cầu từ file "Bài tập AI-Khử nhiễu ảnh.pdf".
+ * @param {File} file - File ảnh cần xử lý
+ */
+export const mockDenoiseImage = async (file) => {
+    console.log("[UC-39 | MOCK] Denoising image:", file.name);
+    
+    // Chỉ áp dụng cho file ảnh theo yêu cầu
+    if (!file.type.startsWith('image/')) {
+        return { success: true, message: "Không phải file ảnh, bỏ qua khử nhiễu.", denoised: false };
+    }
+    
+    await sleep(1500); // Giả lập thời gian xử lý AI
+    
     return {
         success: true,
+        message: "Khử nhiễu ảnh thành công bằng mô hình AI (DnCNN).",
+        denoised: true,
+        modelUsed: "DnCNN",
+        denoisedFile: {
+            name: `${file.name.split('.').slice(0, -1).join('.')}_denoised.png`,
+            size: file.size * 0.9 // Giả lập kích thước thay đổi
+        }
+    };
+};
+
+/**
+ * BƯỚC 3: Giả lập OCR để trích xuất văn bản.
+ * @param {File} file - File cần OCR
+ */
+export const mockOcrProcessing = async (file) => {
+    console.log("[UC-39 | MOCK] Processing OCR for:", file.name);
+    await sleep(2000); // Giả lập thời gian OCR
+
+    // Giả lập nội dung trích xuất dựa trên file mẫu
+    if (file.name.includes('tb1017')) {
+         return {
+            success: true,
+            ocrContent: `BỘ CÔNG THƯƠNG\nTRƯỜNG ĐẠI HỌC CÔNG THƯƠNG\nSố: 1017/TB-DCT\nTHÔNG BÁO\nVề việc nhận hồ sơ xét học bổng sinh viên vượt khó học kỳ II năm học 2024-2025...`,
+        };
+    }
+
+    return {
+        success: true,
+        ocrContent: `CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM\nĐộc lập - Tự do - Hạnh phúc\nSố: 123/QĐ-BGDĐT\nNgày ban hành: 19/09/2025\nQUYẾT ĐỊNH\nV/v ban hành quy chế mới\n...`,
+    };
+};
+
+/**
+ * BƯỚC 3.1: Giả lập kiểm tra trùng lặp (UC-88)
+ * @param {File} file 
+ * @param {boolean} checkEnabled - Biến để bật/tắt tính năng này cho demo
+ */
+export const mockDuplicateCheck = async (file, checkEnabled = true) => {
+    console.log(`[UC-39 | MOCK] Checking duplicates for: ${file.name}. Enabled: ${checkEnabled}`);
+    await sleep(2500); // Giả lập thời gian quét CSDL
+
+    if (!checkEnabled) {
+        return { success: true, isDuplicate: false };
+    }
+    
+    // Giả lập kịch bản: Nếu tên file chứa "Dupli-Document", thì phát hiện trùng lặp
+    if (file.name.toLowerCase().includes("dupli-document")) {
+        return {
+            success: false, // Trả về false để dừng luồng
+            error: "409: Duplicate or conflicting document detected",
+            isDuplicate: true,
+            duplicateData: {
+                similarity: "95.7%",
+                existingDocument: {
+                    name: "Tài liệu Kế hoạch Kinh doanh 2025.pdf",
+                    id: "DOC-XYZ-123",
+                    owner: "Phòng Kinh Doanh"
+                }
+            }
+        };
+    }
+    
+    return { success: true, isDuplicate: false, message: "Không phát hiện tài liệu trùng lặp." };
+};
+
+
+/**
+ * BƯỚC 4: Giả lập Gợi ý Metadata & Trích xuất Key-Values (UC-73)
+ * @param {string} ocrContent - Nội dung đã được OCR
+ */
+export const mockMetadataSuggestion = async (ocrContent) => {
+    console.log("[UC-39 | MOCK] Suggesting metadata and extracting key-values...");
+    await sleep(1800);
+
+    let key_values = {};
+    // Giả lập trích xuất key-value dựa trên nội dung OCR
+    if (ocrContent.includes("1017/TB-DCT")) {
+        key_values = {
+            "Số hiệu": "1017/TB-DCT",
+            "Loại văn bản": "Thông báo",
+            "Ngày ban hành": "19/09/2025", // Mâu thuẫn với yêu cầu
+            "Cơ quan ban hành": "TRƯỜNG ĐẠI HỌC CÔNG THƯƠNG",
+            "Trích yếu": "V/v nhận hồ sơ xét học bổng sinh viên vượt khó...",
+            "Số lượng": -5 // Mâu thuẫn
+        };
+    } else {
+        key_values = {
+            "Số hiệu": "123/QĐ-BGDĐT",
+            "Loại văn bản": "Quyết định",
+            "Ngày ban hành": "19/09/2025",
+            "Cơ quan ban hành": "Bộ Giáo dục và Đào tạo",
+             "Người ký": null, // Giá trị thiếu
+        };
+    }
+
+    return {
+        success: true,
+        suggestedMetadata: {
+            tags: "thông báo, học bổng, sinh viên, học phí",
+            category: 1, // Giả sử ID 1 = "Hành chính"
+            key_values: key_values
+        },
+        warnings: [ // Giả lập các cảnh báo thiếu thông tin
+            { field: "Người ký", message: "Không xác định được người ký từ nội dung." }
+        ]
+    };
+};
+
+/**
+ * BƯỚC 3.2: Giả lập nhúng Watermark
+ * @param {File} file
+ */
+export const mockEmbedWatermark = async (file) => {
+    console.log("[UC-39 | MOCK] Embedding watermark for:", file.name);
+    await sleep(1000);
+
+    return {
+        success: true,
+        message: "Đã nhúng watermark 'Confidential - INNOTECH' vào tài liệu.",
+        watermarkedFile: {
+            name: `${file.name.split('.').slice(0, -1).join('.')}_watermarked.pdf`,
+            size: file.size * 1.02 // Kích thước tăng nhẹ
+        }
+    };
+};
+
+/**
+ * BƯỚC 5-8: Giả lập bước cuối cùng: Lưu trữ, tạo bản ghi, và Auto-Route (UC-84)
+ * @param {File} file 
+ * @param {object} metadata 
+ */
+export const mockFinalizeUpload = async (file, metadata) => {
+    console.log("[UC-39 | MOCK] Finalizing upload for:", file.name);
+    await sleep(2000);
+
+    const doc_id = 'DOC-' + Date.now().toString().slice(-6);
+    
+    // Tích hợp UC-84: Auto-Route Document After Upload
+    const autoRouteResult = await mockTriggerAutoRoute(file, metadata);
+
+    const response = {
+        success: true,
+        message: "Tài liệu đã được tải lên và xử lý thành công!",
+        document: {
+            doc_id,
+            title: metadata.title,
+            version: "1.0",
+            status: autoRouteResult.triggered ? "PROCESSING_WORKFLOW" : "DRAFT",
+            public_link: metadata.accessType === 'public' ? `https://dms.innotech.vn/share/${doc_id}` : null
+        },
+        autoRouteInfo: autoRouteResult, // Gắn kết quả auto-route vào response
+    };
+    
+    return response;
+};
+
+/**
+ * (MỚI) Giả lập API kích hoạt quy trình tự động (UC-84).
+ */
+export const mockTriggerAutoRoute = async (file, metadata) => {
+    console.log(`[UC-84 | MOCK] Checking auto-route rules for category: ${metadata.category}`);
+    await sleep(1000);
+
+    // RULE 1: Danh mục "Hành chính" (ID=1) -> Gửi cho Trưởng phòng Hành chính
+    if (String(metadata.category) === "1") {
+        return {
+            triggered: true,
+            workflow: {
+                name: "Quy trình duyệt Văn bản Hành chính",
+                id: "WF-ADMIN-01",
+                steps: [
+                    { name: "Tải lên", status: "completed", user: "Người dùng", date: new Date().toISOString() },
+                    { name: "Gửi đến TP Hành chính", status: "completed", user: "Hệ thống", date: new Date().toISOString() },
+                    { name: "Chờ duyệt bởi TP Hành chính", status: "pending", user: "Nguyễn Văn A", date: null },
+                    { name: "Lưu trữ", status: "upcoming", user: null, date: null }
+                ]
+            },
+            message: "Tài liệu thuộc danh mục 'Hành chính', đã tự động gửi đến quy trình duyệt của Trưởng phòng Hành chính.",
+        };
+    }
+    
+    // NO MATCHING RULE
+    return {
         triggered: false,
         workflow: null,
-        message: "Tải lên thành công. Không tìm thấy quy trình tự động nào phù hợp. Tài liệu sẽ được lưu vào thư mục 'Chờ xử lý'.",
+        message: "Không tìm thấy quy trình tự động nào phù hợp. Tài liệu được lưu dưới dạng bản nháp.",
+    };
+};
+
+
+/**
+ * UC-73: Giả lập API gợi ý metadata CHUYÊN SÂU cho trang demo
+ * Phân tích và trả về các gợi ý chi tiết, bao gồm cả các trường hợp thiếu và mâu thuẫn.
+ */
+export const mockDetailedSuggestMetadata = async (file) => {
+    console.log(`[UC-73 | MOCK] Analyzing file for detailed metadata suggestions: ${file.name}`);
+    await sleep(2000); // Giả lập thời gian phân tích bằng AI
+
+    // Kịch bản 1: File "hợp lệ"
+    let result = {
+        title: { value: file.name.replace(/\.[^/.]+$/, ""), confidence: 92.5 },
+        summary: { value: "Đây là bản tóm tắt tự động được tạo ra từ nội dung của tài liệu. Nội dung chính đề cập đến việc xét học bổng cho sinh viên có hoàn cảnh khó khăn.", confidence: 88.0 },
+        category: { value: 1, confidence: 99.5 }, // ID 1 = "Hành chính"
+        tags: [
+            { value: "học bổng", confidence: 99.1 },
+            { value: "sinh viên", confidence: 98.3 },
+            { value: "học phí", confidence: 92.0 },
+            { value: "thông báo", confidence: 85.7 },
+        ],
+        key_values: {
+            "Số hiệu": "1017/TB-DCT",
+            "Loại văn bản": "Thông báo",
+            "Ngày ban hành": "19/09/2025", // Mâu thuẫn
+            "Cơ quan ban hành": "TRƯỜNG ĐẠI HỌC CÔNG THƯƠNG",
+            "Người ký": null, // Thiếu
+        },
+    };
+    
+    // Kiểm tra các trường hợp thiếu và mâu thuẫn
+    const { conflicts } = mockDataConflictCheck(result.key_values);
+    const warnings = [];
+    if (result.key_values["Người ký"] === null) {
+        warnings.push({ field: "Người ký", message: "Không tìm thấy thông tin người ký trong văn bản." });
+    }
+
+    return { 
+        success: true, 
+        suggestions: result,
+        analysis: {
+            conflicts,
+            warnings
+        }
     };
 };
