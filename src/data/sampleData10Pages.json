@@ -1,0 +1,137 @@
+{
+  "documentInfo": {
+    "name": "bao_cao_tai_chinh_quy_3.pdf",
+    "type": "application/pdf",
+    "size": "5.1 MB",
+    "pages": 10
+  },
+  "ocrResult": {
+    "processingTime": 5.75,
+    "confidence": 97.2,
+    "language": "Vietnamese (vi)",
+    "extractedText": "BÁO CÁO TÀI CHÍNH QUÝ III NĂM 2025\nCÔNG TY TNHH INNOTECH VIỆT NAM\n\nI. THÔNG TIN CHUNG\n1. Tên công ty: Công ty TNHH INNOTECH Việt Nam\n2. Mã số thuế: 0312345678\n3. Địa chỉ: 123 Đường Nguyễn Văn Cừ, Quận 5, TP.HCM\n4. Kỳ báo cáo: Quý III năm 2025\n5. Ngày lập báo cáo: 15/10/2025\n\nII. KẾT QUẢ HOẠT ĐỘNG KINH DOANH\n1. Doanh thu thuần: 15.000.000.000 VNĐ\n2. Giá vốn hàng bán: 9.000.000.000 VNĐ\n3. Lợi nhuận gộp: 6.000.000.000 VNĐ\n4. Chi phí quản lý doanh nghiệp: 2.000.000.000 VNĐ\n5. Chi phí bán hàng: 1.500.000.000 VNĐ\n6. Lợi nhuận thuần từ hoạt động kinh doanh: 2.500.000.000 VNĐ\n\nIII. TÌNH HÌNH TÀI CHÍNH\n1. Tổng tài sản: 50.000.000.000 VNĐ\n2. Nợ phải trả: 20.000.000.000 VNĐ\n3. Vốn chủ sở hữu: 30.000.000.000 VNĐ\n\nIV. PHÂN TÍCH VÀ NHẬN XÉT\n1. So sánh với cùng kỳ năm trước\n2. Đánh giá xu hướng phát triển\n3. Rủi ro và cơ hội\n\nV. KẾ HOẠCH QUÝ IV\n1. Mục tiêu doanh thu\n2. Chiến lược marketing\n3. Kế hoạch nhân sự\n\nVI. KẾT LUẬN\nBáo cáo này được lập và trình bày theo đúng quy định của pháp luật và chuẩn mực kế toán Việt Nam.",
+    "keyValuePairs": [
+      {
+        "key": "ten_cong_ty",
+        "value": "Công ty TNHH INNOTECH Việt Nam",
+        "confidence": 99.8
+      },
+      {
+        "key": "ma_so_thue",
+        "value": "0312345678",
+        "confidence": 99.5
+      },
+      {
+        "key": "ky_bao_cao",
+        "value": "Quý III năm 2025",
+        "confidence": 98.7
+      },
+      {
+        "key": "ngay_lap_bao_cao",
+        "value": "15/10/2025",
+        "confidence": 99.2
+      },
+      {
+        "key": "doanh_thu_thuan",
+        "value": "15.000.000.000 VNĐ",
+        "confidence": 97.8
+      },
+      {
+        "key": "loi_nhuan_thuan",
+        "value": "2.500.000.000 VNĐ",
+        "confidence": 96.5
+      }
+    ],
+    "tables": [
+      {
+        "name": "Bảng Kết Quả Hoạt Động Kinh Doanh",
+        "headers": [
+          "Chỉ tiêu",
+          "Số tiền (VNĐ)",
+          "Tỷ lệ (%)"
+        ],
+        "rows": [
+          [
+            "Doanh thu thuần",
+            "15.000.000.000",
+            "100.0"
+          ],
+          [
+            "Giá vốn hàng bán",
+            "9.000.000.000",
+            "60.0"
+          ],
+          [
+            "Lợi nhuận gộp",
+            "6.000.000.000",
+            "40.0"
+          ],
+          [
+            "Chi phí quản lý",
+            "2.000.000.000",
+            "13.3"
+          ],
+          [
+            "Chi phí bán hàng",
+            "1.500.000.000",
+            "10.0"
+          ],
+          [
+            "Lợi nhuận thuần",
+            "2.500.000.000",
+            "16.7"
+          ]
+        ]
+      }
+    ],
+    "warnings": [
+      "Một số trang có chất lượng hình ảnh thấp, độ chính xác có thể giảm.",
+      "Phát hiện chữ viết tay ở phần chữ ký không thể nhận dạng."
+    ]
+  },
+  "metadataSuggestion": {
+    "title": "Báo cáo tài chính Quý III năm 2025",
+    "keywords": [
+      "báo cáo tài chính",
+      "quý III",
+      "2025",
+      "doanh thu",
+      "lợi nhuận"
+    ],
+    "description": "Báo cáo tài chính quý III năm 2025 của Công ty TNHH INNOTECH Việt Nam, bao gồm kết quả hoạt động kinh doanh và tình hình tài chính.",
+    "category": 3,
+    "documentType": 3
+  },
+  "processingSteps": [
+    {
+      "id": 1,
+      "name": "Nhận diện định dạng",
+      "status": "completed",
+      "details": "PDF ảnh (10 trang)"
+    },
+    {
+      "id": 2,
+      "name": "Khử nhiễu và tiền xử lý",
+      "status": "completed",
+      "details": "Đã áp dụng bộ lọc khử nhiễu AI"
+    },
+    {
+      "id": 3,
+      "name": "Đang xử lý OCR",
+      "status": "completed",
+      "details": "Trích xuất văn bản với độ chính xác 97.2%"
+    },
+    {
+      "id": 4,
+      "name": "Phân tích và gợi ý metadata",
+      "status": "completed",
+      "details": "Đã phân tích nội dung để gợi ý siêu dữ liệu"
+    },
+    {
+      "id": 5,
+      "name": "Hoàn tất xử lý",
+      "status": "completed",
+      "details": "Chuẩn bị kết quả cuối cùng"
+    }
+  ]
+}

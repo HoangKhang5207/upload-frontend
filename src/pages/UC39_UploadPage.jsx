@@ -305,27 +305,27 @@ const UC39_UploadPage = () => {
         const conflicts = [];
         
         // Kiểm tra số lượng âm
-        if (keyValues["Số lượng"] !== undefined && keyValues["Số lượng"] < 0) {
+        if (keyValues["so_luong"] !== undefined && keyValues["so_luong"] < 0) {
             conflicts.push({
-                field: "Số lượng",
-                value: keyValues["Số lượng"],
+                field: "so_luong",
+                value: keyValues["so_luong"],
                 message: "Số lượng không thể là số âm"
             });
         }
         
         // Kiểm tra giá trị âm
-        if (keyValues["Giá trị"] !== undefined && keyValues["Giá trị"] < 0) {
+        if (keyValues["gia_tri"] !== undefined && keyValues["gia_tri"] < 0) {
             conflicts.push({
-                field: "Giá trị",
-                value: keyValues["Giá trị"],
+                field: "gia_tri",
+                value: keyValues["gia_tri"],
                 message: "Giá trị không thể là số âm"
             });
         }
         
         // Kiểm tra ngày vượt quá 20/08/2025
-        if (keyValues["Ngày ban hành"]) {
+        if (keyValues["ngay_ban_hanh"]) {
             const datePattern = /(\d{2})\/(\d{2})\/(\d{4})/;
-            const match = keyValues["Ngày ban hành"].match(datePattern);
+            const match = keyValues["ngay_ban_hanh"].match(datePattern);
             if (match) {
                 const day = parseInt(match[1], 10);
                 const month = parseInt(match[2], 10) - 1; // JavaScript months are 0-indexed
@@ -335,8 +335,8 @@ const UC39_UploadPage = () => {
                 
                 if (documentDate > cutoffDate) {
                     conflicts.push({
-                        field: "Ngày ban hành",
-                        value: keyValues["Ngày ban hành"],
+                        field: "ngay_ban_hanh",
+                        value: keyValues["ngay_ban_hanh"],
                         message: "Ngày ban hành không thể vượt quá 20/08/2025"
                     });
                 }

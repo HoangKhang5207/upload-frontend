@@ -11,14 +11,21 @@ import {
     SparklesIcon,
     ExclamationTriangleIcon,
     InformationCircleIcon,
-    DocumentTextIcon
+    DocumentTextIcon,
+    TagIcon,
+    FolderIcon,
+    DocumentDuplicateIcon
 } from '@heroicons/react/24/solid';
 
 // --- Mock API Imports ---
 import { mockDetailedSuggestMetadata } from '../../api/mockUploadApi';
 import { mockGetCategories } from '../../api/mockDmsApi';
 
-import SuggestionField from '../../components/dms/upload/SuggestionField';
+import KeyValuePairsDisplay from '../../components/dms/upload/KeyValuePairsDisplay';
+import EditableMetadataForm from '../../components/dms/upload/EditableMetadataForm';
+
+// --- Document Categories and Types ---
+import { documentCategories, documentTypes } from '../../data/documentCategories';
 
 // --- Main Page Component ---
 const UC73_SuggestMetadataPage = () => {
@@ -26,11 +33,12 @@ const UC73_SuggestMetadataPage = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [analysisResult, setAnalysisResult] = useState(null);
     const [categories, setCategories] = useState([]);
-    const [formData, setFormData] = useState({
+    const [metadata, setMetadata] = useState({
         title: '',
-        summary: '',
+        description: '',
+        keywords: [],
         category: '',
-        tags: [],
+        documentType: ''
     });
 
     useEffect(() => {
@@ -41,14 +49,15 @@ const UC73_SuggestMetadataPage = () => {
         setFile(null);
         setIsProcessing(false);
         setAnalysisResult(null);
-        setFormData({ title: '', summary: '', category: '', tags: [] });
+        setMetadata({
+            title: '',
+            description: '',
+            keywords: [],
+            category: '',
+            documentType: ''
+        });
     };
 
-    const handleAcceptSuggestion = (field, value) => {
-        setFormData(prev => ({...prev, [field]: value }));
-        toast.success(`Đã áp dụng gợi ý cho '${labelMappings[field] || field}'`);
-    };
-    
     const onDrop = useCallback((acceptedFiles) => {
         const selectedFile = acceptedFiles[0];
         resetState();
@@ -62,6 +71,14 @@ const UC73_SuggestMetadataPage = () => {
                 success: (res) => {
                     if (res.success) {
                         setAnalysisResult(res);
+                        // Transform the data structure to match EditableMetadataForm expectations
+                        setMetadata({
+                            title: res.suggestions.title?.value || '',
+                            description: res.suggestions.summary?.value || '',
+                            keywords: res.suggestions.tags?.map(tag => tag.value) || [],
+                            category: res.suggestions.category?.value || '',
+                            documentType: res.suggestions.documentType?.value || ''
+                        });
                         setIsProcessing(false);
                         return 'Phân tích thành công!';
                     }
@@ -77,7 +94,23 @@ const UC73_SuggestMetadataPage = () => {
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, maxFiles: 1, disabled: isProcessing });
     
-    const labelMappings = { title: 'Tiêu đề', summary: 'Tóm tắt', category: 'Danh mục' };
+    // Handle saving metadata from EditableMetadataForm
+    const handleSaveMetadata = (updatedMetadata) => {
+        setMetadata(updatedMetadata);
+        toast.success("Đã cập nhật siêu dữ liệu!");
+    };
+
+    // Handle canceling metadata editing
+    const handleCancelMetadata = () => {
+        // Reset to original values if needed
+    };
+
+    // Xử lý chỉnh sửa key-value pair
+    const handleEditKeyValue = (key, value) => {
+        // Trong thực tế, bạn có thể mở một modal để chỉnh sửa
+        // Ở đây chúng ta chỉ hiển thị toast để minh họa
+        toast.success(`Chỉnh sửa key-value: ${key} = ${value}`);
+    };
 
     return (
         <>
@@ -113,7 +146,7 @@ const UC73_SuggestMetadataPage = () => {
                             <div className="flex justify-between items-center mb-6 pb-4 border-b">
                                 <h2 className="text-2xl font-bold text-gray-800 flex items-center">
                                     <DocumentTextIcon className="h-8 w-8 mr-3 text-blue-600"/>
-                                    {file.name}
+                                    {metadata.title || file.name}
                                 </h2>
                                  <button onClick={resetState} className="flex items-center text-sm px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
                                     <ArrowPathIcon className="h-4 w-4 mr-2"/> Phân tích file khác
@@ -121,71 +154,69 @@ const UC73_SuggestMetadataPage = () => {
                             </div>
                             
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                {/* Cột trái: Form nhập liệu */}
+                                {/* Cột trái: Key-Value Pairs */}
                                 <div className="space-y-6">
-                                    <SuggestionField label="Tiêu đề tài liệu" suggestion={analysisResult.suggestions.title} onAccept={() => handleAcceptSuggestion('title', analysisResult.suggestions.title.value)}>
-                                        <input type="text" value={formData.title} onChange={e => setFormData(p => ({...p, title: e.target.value}))} className="w-full p-2 border rounded-md"/>
-                                    </SuggestionField>
-
-                                    <SuggestionField label="Tóm tắt nội dung" suggestion={analysisResult.suggestions.summary} onAccept={() => handleAcceptSuggestion('summary', analysisResult.suggestions.summary.value)}>
-                                        <textarea value={formData.summary} onChange={e => setFormData(p => ({...p, summary: e.target.value}))} rows="5" className="w-full p-2 border rounded-md"></textarea>
-                                    </SuggestionField>
-                                    
-                                    <SuggestionField label="Danh mục" suggestion={{...analysisResult.suggestions.category, value: categories.find(c => c.id === analysisResult.suggestions.category.value)?.name}} onAccept={() => handleAcceptSuggestion('category', analysisResult.suggestions.category.value)}>
-                                        <select value={formData.category} onChange={e => setFormData(p => ({...p, category: e.target.value}))} className="w-full p-2 border rounded-md">
-                                            <option value="">-- Chọn danh mục --</option>
-                                            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                        </select>
-                                    </SuggestionField>
-                                    
-                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700">Tags / Keywords</label>
-                                        <div className="mt-2 p-3 bg-gray-50 border rounded-md">
-                                            <p className="text-xs text-gray-500 mb-2">Click vào tag gợi ý để thêm:</p>
-                                            <div className="flex flex-wrap gap-2">
-                                            {analysisResult.suggestions.tags.map(tag => (
-                                                <button key={tag.value} onClick={() => setFormData(p => ({...p, tags: [...new Set([...p.tags, tag.value])]}))} className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full hover:bg-blue-200 transition-colors">
-                                                    {tag.value} <span className="text-xs opacity-75">({tag.confidence.toFixed(1)}%)</span>
-                                                </button>
-                                            ))}
-                                            </div>
-                                        </div>
-                                        <input type="text" value={formData.tags.join(', ')} readOnly className="mt-2 w-full p-2 border rounded-md bg-gray-100 cursor-not-allowed" placeholder="Tags đã chọn..."/>
-                                    </div>
-                                </div>
-                                
-                                {/* Cột phải: Thông tin AI trích xuất */}
-                                <div className="space-y-6">
-                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700">Key-Values đã trích xuất</label>
-                                        <pre className="mt-1 bg-gray-800 text-white p-3 rounded-md text-xs whitespace-pre-wrap max-h-48 overflow-y-auto">
-                                            {JSON.stringify(analysisResult.suggestions.key_values, null, 2)}
-                                        </pre>
-                                     </div>
+                                     <KeyValuePairsDisplay 
+                                        keyValuePairs={analysisResult.suggestions.key_values}
+                                        onEdit={handleEditKeyValue}
+                                     />
                                      
                                      {analysisResult.analysis.conflicts.length > 0 && (
-                                         <div className="p-4 bg-red-50 border-l-4 border-red-400">
-                                             <h4 className="font-bold flex items-center text-red-800"><ExclamationTriangleIcon className="h-5 w-5 mr-2"/> Phát hiện mâu thuẫn</h4>
+                                         <div className="p-4 bg-red-50 border-l-4 border-red-400 rounded-md">
+                                             <h4 className="font-bold flex items-center text-red-800">
+                                                 <ExclamationTriangleIcon className="h-5 w-5 mr-2"/> Phát hiện mâu thuẫn
+                                             </h4>
                                              <ul className="list-disc list-inside text-sm mt-2 text-red-700 space-y-1">
-                                                 {analysisResult.analysis.conflicts.map((c, i) => <li key={i}><strong>{c.field}:</strong> {c.message}</li>)}
+                                                 {analysisResult.analysis.conflicts.map((c, i) => (
+                                                     <li key={i}>
+                                                         <strong>{c.field}:</strong> {c.message}
+                                                     </li>
+                                                 ))}
                                              </ul>
                                          </div>
                                      )}
                                      
                                      {analysisResult.analysis.warnings.length > 0 && (
-                                         <div className="p-4 bg-yellow-50 border-l-4 border-yellow-400">
-                                             <h4 className="font-bold flex items-center text-yellow-800"><InformationCircleIcon className="h-5 w-5 mr-2"/> Cảnh báo thiếu thông tin</h4>
+                                         <div className="p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-md">
+                                             <h4 className="font-bold flex items-center text-yellow-800">
+                                                 <InformationCircleIcon className="h-5 w-5 mr-2"/> Cảnh báo thiếu thông tin
+                                             </h4>
                                              <ul className="list-disc list-inside text-sm mt-2 text-yellow-700 space-y-1">
-                                                 {analysisResult.analysis.warnings.map((w, i) => <li key={i}><strong>{w.field}:</strong> {w.message}</li>)}
+                                                 {analysisResult.analysis.warnings.map((w, i) => (
+                                                     <li key={i}>
+                                                         <strong>{w.field}:</strong> {w.message}
+                                                     </li>
+                                                 ))}
                                              </ul>
                                          </div>
                                      )}
                                 </div>
+                                
+                                {/* Cột phải: Metadata có thể chỉnh sửa */}
+                                <div className="space-y-6">
+                                    <EditableMetadataForm 
+                                        metadata={metadata}
+                                        onSave={handleSaveMetadata}
+                                        onCancel={handleCancelMetadata}
+                                    />
+                                </div>
                             </div>
                             
                             <div className="mt-8 pt-6 border-t flex justify-end gap-4">
-                                <button type="button" onClick={resetState} className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-semibold">Hủy</button>
-                                <button type="button" onClick={() => toast.success("Đã lưu metadata thành công!")} className="px-8 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700">Lưu Metadata</button>
+                                <button 
+                                    type="button" 
+                                    onClick={resetState} 
+                                    className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-semibold"
+                                >
+                                    Hủy
+                                </button>
+                                <button 
+                                    type="button" 
+                                    onClick={() => toast.success("Đã lưu metadata thành công!")} 
+                                    className="px-8 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700"
+                                >
+                                    Lưu Metadata
+                                </button>
                             </div>
                         </div>
                     )}

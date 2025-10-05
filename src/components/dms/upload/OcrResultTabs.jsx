@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { ClipboardDocumentIcon, ListBulletIcon, SparklesIcon, TableCellsIcon } from '@heroicons/react/24/solid';
-
+import { 
+  DocumentTextIcon, 
+  ListBulletIcon, 
+  SparklesIcon, 
+  TableCellsIcon,
+  ClipboardDocumentIcon
+} from '@heroicons/react/24/solid';
 
 const OcrResultTabs = ({ result }) => {
     const [activeTab, setActiveTab] = useState('text');
@@ -15,32 +20,39 @@ const OcrResultTabs = ({ result }) => {
         switch(activeTab) {
             case 'text':
                 return (
-                    <div>
-                        <button onClick={() => copyToClipboard(result.extractedText)} className="absolute top-2 right-2 flex items-center text-xs px-2 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700">
+                    <div className="relative">
+                        <button 
+                            onClick={() => copyToClipboard(result.extractedText)} 
+                            className="absolute top-4 right-4 z-10 flex items-center text-xs px-3 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors shadow-md"
+                        >
                             <ClipboardDocumentIcon className="h-4 w-4 mr-1"/> Sao chép
                         </button>
-                        <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans p-4 overflow-auto max-h-[400px]">
+                        <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans p-6 overflow-auto max-h-[500px] bg-gray-50 rounded-b-lg">
                             {result.extractedText}
                         </pre>
                     </div>
                 );
             case 'kvp':
                 return (
-                     <div className="p-4 overflow-auto max-h-[400px]">
+                     <div className="p-6 overflow-auto max-h-[500px]">
                         <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
+                            <thead className="bg-gray-100">
                                 <tr>
-                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Key</th>
-                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
-                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Confidence</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Key</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Value</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Độ tin cậy</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {result.keyValuePairs.map((kv, i) => (
-                                    <tr key={i}>
-                                        <td className="px-4 py-3 text-sm font-semibold text-gray-800">{kv.key}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-600">{kv.value}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-600">{kv.confidence.toFixed(1)}%</td>
+                                    <tr key={i} className="hover:bg-gray-50">
+                                        <td className="px-6 py-4 text-sm font-semibold text-gray-800">{kv.key}</td>
+                                        <td className="px-6 py-4 text-sm text-gray-600">{kv.value}</td>
+                                        <td className="px-6 py-4 text-sm">
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                {kv.confidence.toFixed(1)}%
+                                            </span>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -49,24 +61,36 @@ const OcrResultTabs = ({ result }) => {
                 );
             case 'tables':
                  return (
-                     <div className="p-4 overflow-auto max-h-[400px] space-y-6">
+                     <div className="p-6 overflow-auto max-h-[500px] space-y-6">
                          {result.tables.map((table, i) => (
-                             <div key={i}>
-                                 <h4 className="font-bold mb-2 text-gray-800">{table.name}</h4>
-                                 <table className="min-w-full border">
-                                     <thead className="bg-gray-100">
-                                         <tr>
-                                             {table.headers.map((h, j) => <th key={j} className="px-4 py-2 text-left text-sm font-semibold border-b">{h}</th>)}
-                                         </tr>
-                                     </thead>
-                                     <tbody>
-                                         {table.rows.map((row, k) => (
-                                             <tr key={k} className="hover:bg-gray-50">
-                                                 {row.map((cell, l) => <td key={l} className="px-4 py-2 text-sm border-b">{cell}</td>)}
+                             <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                                 <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
+                                     <h4 className="font-bold text-gray-800">{table.name}</h4>
+                                 </div>
+                                 <div className="overflow-x-auto">
+                                     <table className="min-w-full">
+                                         <thead className="bg-gray-100">
+                                             <tr>
+                                                 {table.headers.map((h, j) => (
+                                                     <th key={j} className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                                                         {h}
+                                                     </th>
+                                                 ))}
                                              </tr>
-                                         ))}
-                                     </tbody>
-                                 </table>
+                                         </thead>
+                                         <tbody className="divide-y divide-gray-200">
+                                             {table.rows.map((row, k) => (
+                                                 <tr key={k} className="hover:bg-gray-50">
+                                                     {row.map((cell, l) => (
+                                                         <td key={l} className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
+                                                             {cell}
+                                                         </td>
+                                                     ))}
+                                                 </tr>
+                                             ))}
+                                         </tbody>
+                                     </table>
+                                 </div>
                              </div>
                          ))}
                      </div>
@@ -81,22 +105,24 @@ const OcrResultTabs = ({ result }) => {
     ];
 
     return (
-        <div>
-            <div className="border-b border-gray-200">
-                <nav className="-mb-px flex space-x-6" aria-label="Tabs">
+        <div className="rounded-xl overflow-hidden shadow-md">
+            <div className="border-b border-gray-200 bg-white">
+                <nav className="-mb-px flex" aria-label="Tabs">
                     {tabs.map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`${activeTab === tab.id ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
-                                        flex items-center whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors`}
+                            className={`${activeTab === tab.id 
+                                ? 'border-blue-500 text-blue-600 bg-blue-50' 
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50'}
+                                flex items-center justify-center whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors duration-200 flex-1`}
                         >
                             <tab.icon className="h-5 w-5 mr-2" /> {tab.name}
                         </button>
                     ))}
                 </nav>
             </div>
-            <div className="relative bg-gray-50 rounded-b-lg border border-t-0">
+            <div className="bg-white rounded-b-lg">
                 {renderContent()}
             </div>
         </div>

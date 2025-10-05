@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "name": "Nhận diện định dạng",
+    "status": "in-progress",
+    "details": ""
+  },
+  {
+    "id": 2,
+    "name": "Khử nhiễu và tiền xử lý",
+    "status": "pending",
+    "details": ""
+  },
+  {
+    "id": 3,
+    "name": "Đang xử lý OCR",
+    "status": "pending",
+    "details": ""
+  },
+  {
+    "id": 4,
+    "name": "Phân tích và gợi ý metadata",
+    "status": "pending",
+    "details": ""
+  },
+  {
+    "id": 5,
+    "name": "Hoàn tất xử lý",
+    "status": "pending",
+    "details": ""
+  }
+]

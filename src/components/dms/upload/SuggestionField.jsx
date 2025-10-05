@@ -1,6 +1,9 @@
 import React from "react";
 import { CheckIcon, LightBulbIcon } from '@heroicons/react/24/solid';
 
+// Component này được giữ lại để tương thích với các phần khác của ứng dụng
+// nhưng không được sử dụng trong UC73_SuggestMetadataPage nữa
+
 const SuggestionField = ({ label, suggestion, children, onAccept }) => (
     <div>
         <label className="block text-sm font-medium text-gray-700">{label}</label>

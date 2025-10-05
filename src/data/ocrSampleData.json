@@ -1,0 +1,142 @@
+{
+  "documentInfo": {
+    "name": "hop_dong_lao_dong_mau.pdf",
+    "type": "application/pdf",
+    "size": "2.4 MB",
+    "pages": 5
+  },
+  "ocrResult": {
+    "processingTime": 3.45,
+    "confidence": 96.8,
+    "language": "Vietnamese (vi)",
+    "extractedText": "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM\nĐộc lập - Tự do - Hạnh phúc\n\nHỢP ĐỒNG LAO ĐỘNG\nSố: 123/2025/HĐLĐ-INNOTECH\n\nHôm nay, ngày 01 tháng 02 năm 2024, tại văn phòng Công ty TNHH INNOTECH Việt Nam, chúng tôi gồm:\nBÊN A: CÔNG TY TNHH INNOTECH VIỆT NAM\n- Địa chỉ: 123 Đường Nguyễn Văn Cừ, Quận 5, TP.HCM\n- Mã số thuế: 0312345678\n- Đại diện: Ông Nguyễn Văn Nam - Giám đốc\n\nBÊN B: NGƯỜI LAO ĐỘNG\n- Họ và tên: Trần Thị Lan Anh\n- Ngày sinh: 15/03/1990\n- Số CMND: 0123456789, cấp ngày 01/01/2020, tại TP.HCM\n- Địa chỉ thường trú: 456 Đường Lê Lợi, Quận 1, TP.HCM\n\nĐIỀU 1: VỊ TRÍ CÔNG VIỆC\nBên B đồng ý làm việc cho Bên A với vị trí Nhân viên Kinh doanh.\n\nĐIỀU 2: THỜI HẠN HỢP ĐỒNG\nHợp đồng có thời hạn 24 tháng, từ ngày 01/02/2024 đến ngày 31/01/2026.\n\nĐIỀU 3: MỨC LƯƠNG VÀ PHÚC LỢI\n- Lương cơ bản: 25.000.000 VNĐ/tháng\n- Phụ cấp: 2.000.000 VNĐ/tháng\n- Thưởng theo hiệu quả công việc: Theo quy định của công ty\n\nĐIỀU 4: CHẾ ĐỘ LÀM VIỆC\n- Thời gian làm việc: Từ 8h00 đến 17h00, từ thứ Hai đến thứ Sáu\n- Nghỉ phép: 12 ngày/năm theo quy định của pháp luật\n\nĐIỀU 5: TRÁCH NHIỆM CỦA BÊN A\n- Trả lương đúng hạn cho Bên B\n- Bảo hiểm xã hội, bảo hiểm y tế, bảo hiểm thất nghiệp theo quy định\n\nĐIỀU 6: TRÁCH NHIỆM CỦA BÊN B\n- Thực hiện đúng nội quy, quy chế của công ty\n- Hoàn thành nhiệm vụ được giao\n\nHỢP ĐỒNG ĐƯỢC LẬP THÀNH 02 BẢN, MỖI BÊN GIỮ 01 BẢN CÓ GIÁ TRỊ NHƯ NHAU.\n\nĐẠI DIỆN BÊN A\n(Giám đốc)\n\nNguyễn Văn Nam\n\nĐẠI DIỆN BÊN B\n(Người lao động)\n\nTrần Thị Lan Anh",
+    "keyValuePairs": [
+      {
+        "key": "so_hop_dong",
+        "value": "123/2025/HĐLĐ-INNOTECH",
+        "confidence": 99.5
+      },
+      {
+        "key": "ngay_ky",
+        "value": "01/02/2024",
+        "confidence": 98.2
+      },
+      {
+        "key": "ten_cong_ty",
+        "value": "CÔNG TY TNHH INNOTECH VIỆT NAM",
+        "confidence": 99.9
+      },
+      {
+        "key": "ho_ten",
+        "value": "Trần Thị Lan Anh",
+        "confidence": 99.1
+      },
+      {
+        "key": "ngay_sinh",
+        "value": "15/03/1990",
+        "confidence": 97.5
+      },
+      {
+        "key": "so_cmnd",
+        "value": "0123456789",
+        "confidence": 96.8
+      },
+      {
+        "key": "luong_co_ban",
+        "value": "25.000.000 VNĐ/tháng",
+        "confidence": 95.0
+      },
+      {
+        "key": "thoi_han_hop_dong",
+        "value": "24 tháng",
+        "confidence": 92.3
+      },
+      {
+        "key": "vi_tri_cong_viec",
+        "value": "Nhân viên Kinh doanh",
+        "confidence": 94.7
+      }
+    ],
+    "tables": [
+      {
+        "name": "Bảng Chi Tiết Phúc Lợi",
+        "headers": [
+          "Khoản mục",
+          "Giá trị",
+          "Ghi chú"
+        ],
+        "rows": [
+          [
+            "Lương cơ bản",
+            "25.000.000 VNĐ",
+            "Gross"
+          ],
+          [
+            "Phụ cấp ăn trưa",
+            "1.000.000 VNĐ",
+            "Hàng tháng"
+          ],
+          [
+            "Phụ cấp đi lại",
+            "1.000.000 VNĐ",
+            "Hàng tháng"
+          ],
+          [
+            "Bảo hiểm xã hội",
+            "Theo quy định",
+            "Đóng 100%"
+          ]
+        ]
+      }
+    ],
+    "warnings": [
+      "Chất lượng ảnh ở góc dưới bên phải hơi mờ, độ chính xác có thể giảm.",
+      "Phát hiện chữ viết tay ở phần chữ ký không thể nhận dạng."
+    ]
+  },
+  "metadataSuggestion": {
+    "title": "Hợp đồng lao động - Trần Thị Lan Anh",
+    "keywords": [
+      "hợp đồng lao động",
+      "nhân sự",
+      "kinh doanh",
+      "2024",
+      "INNOTECH"
+    ],
+    "description": "Hợp đồng lao động xác định thời hạn 24 tháng giữa công ty INNOTECH và bà Trần Thị Lan Anh, quy định về mức lương, phúc lợi và các điều khoản lao động khác.",
+    "category": 2,
+    "documentType": 4
+  },
+  "processingSteps": [
+    {
+      "id": 1,
+      "name": "Nhận diện định dạng",
+      "status": "completed",
+      "details": "PDF ảnh (5 trang)"
+    },
+    {
+      "id": 2,
+      "name": "Khử nhiễu và tiền xử lý",
+      "status": "completed",
+      "details": "Đã áp dụng bộ lọc khử nhiễu AI"
+    },
+    {
+      "id": 3,
+      "name": "Đang xử lý OCR",
+      "status": "completed",
+      "details": "Trích xuất văn bản với độ chính xác 96.8%"
+    },
+    {
+      "id": 4,
+      "name": "Phân tích và gợi ý metadata",
+      "status": "completed",
+      "details": "Đã phân tích nội dung để gợi ý siêu dữ liệu"
+    },
+    {
+      "id": 5,
+      "name": "Hoàn tất xử lý",
+      "status": "completed",
+      "details": "Chuẩn bị kết quả cuối cùng"
+    }
+  ]
+}

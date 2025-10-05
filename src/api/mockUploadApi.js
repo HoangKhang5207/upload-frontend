@@ -28,27 +28,27 @@ export const checkDataConflicts = (keyValues) => {
     const conflicts = [];
     
     // Kiểm tra số lượng âm
-    if (keyValues["Số lượng"] !== undefined && keyValues["Số lượng"] < 0) {
+    if (keyValues["so_luong"] !== undefined && keyValues["so_luong"] < 0) {
         conflicts.push({
-            field: "Số lượng",
-            value: keyValues["Số lượng"],
+            field: "so_luong",
+            value: keyValues["so_luong"],
             message: "Số lượng không thể là số âm"
         });
     }
     
     // Kiểm tra giá trị âm
-    if (keyValues["Giá trị"] !== undefined && keyValues["Giá trị"] < 0) {
+    if (keyValues["gia_tri"] !== undefined && keyValues["gia_tri"] < 0) {
         conflicts.push({
-            field: "Giá trị",
-            value: keyValues["Giá trị"],
+            field: "gia_tri",
+            value: keyValues["gia_tri"],
             message: "Giá trị không thể là số âm"
         });
     }
     
     // Kiểm tra ngày vượt quá 20/08/2025
-    if (keyValues["Ngày ban hành"]) {
+    if (keyValues["ngay_ban_hanh"]) {
         const datePattern = /(\d{2})\/(\d{2})\/(\d{4})/;
-        const match = keyValues["Ngày ban hành"].match(datePattern);
+        const match = keyValues["ngay_ban_hanh"].match(datePattern);
         if (match) {
             const day = parseInt(match[1], 10);
             const month = parseInt(match[2], 10) - 1; // JavaScript months are 0-indexed
@@ -58,8 +58,8 @@ export const checkDataConflicts = (keyValues) => {
             
             if (documentDate > cutoffDate) {
                 conflicts.push({
-                    field: "Ngày ban hành",
-                    value: keyValues["Ngày ban hành"],
+                    field: "ngay_ban_hanh",
+                    value: keyValues["ngay_ban_hanh"],
                     message: "Ngày ban hành không thể vượt quá 20/08/2025"
                 });
             }
@@ -487,9 +487,9 @@ export const mockOcrProcess = async (file) => {
             language: "Vietnamese (vi)",
             extractedText: transcript,
             keyValuePairs: [
-                { key: "Ngày", value: "15/08/2025", confidence: 98.0 },
-                { key: "Phòng ban", value: isVideo ? "Kinh doanh" : "Khách hàng", confidence: 95.0 },
-                { key: "Loại nội dung", value: isVideo ? "Cuộc họp" : "Cuộc gọi", confidence: 90.0 },
+                { key: "ngay", value: "15/08/2025", confidence: 98.0 },
+                { key: "phong_ban", value: isVideo ? "Kinh doanh" : "Khách hàng", confidence: 95.0 },
+                { key: "loai_noi_dung", value: isVideo ? "Cuộc họp" : "Cuộc gọi", confidence: 90.0 },
             ],
             tables: [],
             warnings: [
@@ -523,13 +523,14 @@ BÊN B: NGƯỜI LAO ĐỘNG
 - Phụ cấp: 2.000.000 VNĐ/tháng
 ...`,
         keyValuePairs: [
-            { key: "Số hợp đồng", value: "123/2025/HĐLĐ-INNOTECH", confidence: 99.5 },
-            { key: "Ngày ký", value: "01/02/2024", confidence: 98.2 },
-            { key: "Tên công ty (Bên A)", value: "CÔNG TY TNHH INNOTECH VIỆT NAM", confidence: 99.9 },
-            { key: "Họ tên (Bên B)", value: "Trần Thị Lan Anh", confidence: 99.1 },
-            { key: "Ngày sinh (Bên B)", value: "15/03/1990", confidence: 97.5 },
-            { key: "Lương cơ bản", value: "25.000.000 VNĐ/tháng", confidence: 95.0 },
-            { key: "Thời hạn hợp đồng", value: "24 tháng", confidence: 92.3 },
+            { key: "so_hop_dong", value: "123/2025/HĐLĐ-INNOTECH", confidence: 99.5 },
+            { key: "ngay_ky", value: "01/02/2024", confidence: 98.2 },
+            { key: "ten_cong_ty", value: "CÔNG TY TNHH INNOTECH VIỆT NAM", confidence: 99.9 },
+            { key: "ho_ten", value: "Trần Thị Lan Anh", confidence: 99.1 },
+            { key: "ngay_sinh", value: "15/03/1990", confidence: 97.5 },
+            { key: "so_cmnd", value: "0123456789", confidence: 96.8 },
+            { key: "luong_co_ban", value: "25.000.000 VNĐ/tháng", confidence: 95.0 },
+            { key: "thoi_han_hop_dong", value: "24 tháng", confidence: 92.3 },
         ],
         tables: [
             {
@@ -672,18 +673,18 @@ export const mockDataConflictCheck = (keyValues) => {
     const conflicts = [];
 
     // Rule 1: Số lượng không được âm
-    if (keyValues["Số lượng"] !== undefined && keyValues["Số lượng"] < 0) {
+    if (keyValues["so_luong"] !== undefined && keyValues["so_luong"] < 0) {
         conflicts.push({
-            field: "Số lượng",
-            value: keyValues["Số lượng"],
+            field: "so_luong",
+            value: keyValues["so_luong"],
             message: "Số lượng không thể là giá trị âm."
         });
     }
 
     // Rule 2: Ngày ban hành không được vượt quá 20/08/2025
-    if (keyValues["Ngày ban hành"]) {
+    if (keyValues["ngay_ban_hanh"]) {
         const datePattern = /(\d{2})\/(\d{2})\/(\d{4})/;
-        const match = keyValues["Ngày ban hành"].match(datePattern);
+        const match = keyValues["ngay_ban_hanh"].match(datePattern);
         if (match) {
             const day = parseInt(match[1], 10);
             const month = parseInt(match[2], 10) - 1; // Tháng trong JS bắt đầu từ 0
@@ -693,19 +694,19 @@ export const mockDataConflictCheck = (keyValues) => {
 
             if (documentDate > cutoffDate) {
                 conflicts.push({
-                    field: "Ngày ban hành",
-                    value: keyValues["Ngày ban hành"],
-                    message: `Ngày ban hành (${keyValues["Ngày ban hành"]}) không hợp lệ, vượt quá ngày giới hạn 20/08/2025.`
+                    field: "ngay_ban_hanh",
+                    value: keyValues["ngay_ban_hanh"],
+                    message: `Ngày ban hành (${keyValues["ngay_ban_hanh"]}) không hợp lệ, vượt quá ngày giới hạn 20/08/2025.`
                 });
             }
         }
     }
     
     // Rule 3: Số hiệu không hợp lệ (ví dụ)
-    if (keyValues["Số hiệu"] && !keyValues["Số hiệu"].includes('/')) {
+    if (keyValues["so_hieu"] && !keyValues["so_hieu"].includes('/')) {
         conflicts.push({
-            field: "Số hiệu",
-            value: keyValues["Số hiệu"],
+            field: "so_hieu",
+            value: keyValues["so_hieu"],
             message: "Định dạng số hiệu văn bản có vẻ không đúng chuẩn (thường có dạng 'Số/Năm/Ký hiệu')."
         });
     }
@@ -758,13 +759,23 @@ export const mockOcrProcessing = async (file) => {
     if (file.name.includes('tb1017')) {
          return {
             success: true,
-            ocrContent: `BỘ CÔNG THƯƠNG\nTRƯỜNG ĐẠI HỌC CÔNG THƯƠNG\nSố: 1017/TB-DCT\nTHÔNG BÁO\nVề việc nhận hồ sơ xét học bổng sinh viên vượt khó học kỳ II năm học 2024-2025...`,
+            ocrContent: `BỘ CÔNG THƯƠNG
+TRƯỜNG ĐẠI HỌC CÔNG THƯƠNG
+Số: 1017/TB-DCT
+THÔNG BÁO
+Về việc nhận hồ sơ xét học bổng sinh viên vượt khó học kỳ II năm học 2024-2025...`,
         };
     }
 
     return {
         success: true,
-        ocrContent: `CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM\nĐộc lập - Tự do - Hạnh phúc\nSố: 123/QĐ-BGDĐT\nNgày ban hành: 19/09/2025\nQUYẾT ĐỊNH\nV/v ban hành quy chế mới\n...`,
+        ocrContent: `CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+Độc lập - Tự do - Hạnh phúc
+Số: 123/QĐ-BGDĐT
+Ngày ban hành: 19/09/2025
+QUYẾT ĐỊNH
+V/v ban hành quy chế mới
+...`,
     };
 };
 
@@ -814,20 +825,20 @@ export const mockMetadataSuggestion = async (ocrContent) => {
     // Giả lập trích xuất key-value dựa trên nội dung OCR
     if (ocrContent.includes("1017/TB-DCT")) {
         key_values = {
-            "Số hiệu": "1017/TB-DCT",
-            "Loại văn bản": "Thông báo",
-            "Ngày ban hành": "19/09/2025", // Mâu thuẫn với yêu cầu
-            "Cơ quan ban hành": "TRƯỜNG ĐẠI HỌC CÔNG THƯƠNG",
-            "Trích yếu": "V/v nhận hồ sơ xét học bổng sinh viên vượt khó...",
-            "Số lượng": -5 // Mâu thuẫn
+            "so_hieu": "1017/TB-DCT",
+            "loai_van_ban": "Thông báo",
+            "ngay_ban_hanh": "19/09/2025", // Mâu thuẫn với yêu cầu
+            "co_quan_ban_hanh": "TRƯỜNG ĐẠI HỌC CÔNG THƯƠNG",
+            "trich_yeu": "V/v nhận hồ sơ xét học bổng sinh viên vượt khó...",
+            "so_luong": -5 // Mâu thuẫn
         };
     } else {
         key_values = {
-            "Số hiệu": "123/QĐ-BGDĐT",
-            "Loại văn bản": "Quyết định",
-            "Ngày ban hành": "19/09/2025",
-            "Cơ quan ban hành": "Bộ Giáo dục và Đào tạo",
-             "Người ký": null, // Giá trị thiếu
+            "so_hieu": "123/QĐ-BGDĐT",
+            "loai_van_ban": "Quyết định",
+            "ngay_ban_hanh": "19/09/2025",
+            "co_quan_ban_hanh": "Bộ Giáo dục và Đào tạo",
+             "nguoi_ky": null, // Giá trị thiếu
         };
     }
 
@@ -936,9 +947,10 @@ export const mockDetailedSuggestMetadata = async (file) => {
 
     // Kịch bản 1: File "hợp lệ"
     let result = {
-        title: { value: file.name.replace(/\.[^/.]+$/, ""), confidence: 92.5 },
+        title: { value: "Hợp đồng lao động - Trần Thị Lan Anh", confidence: 95.2 },
         summary: { value: "Đây là bản tóm tắt tự động được tạo ra từ nội dung của tài liệu. Nội dung chính đề cập đến việc xét học bổng cho sinh viên có hoàn cảnh khó khăn.", confidence: 88.0 },
         category: { value: 1, confidence: 99.5 }, // ID 1 = "Hành chính"
+        documentType: { value: 4, confidence: 95.0 }, // ID 4 = "Thông báo"
         tags: [
             { value: "học bổng", confidence: 99.1 },
             { value: "sinh viên", confidence: 98.3 },
@@ -946,19 +958,19 @@ export const mockDetailedSuggestMetadata = async (file) => {
             { value: "thông báo", confidence: 85.7 },
         ],
         key_values: {
-            "Số hiệu": "1017/TB-DCT",
-            "Loại văn bản": "Thông báo",
-            "Ngày ban hành": "19/09/2025", // Mâu thuẫn
-            "Cơ quan ban hành": "TRƯỜNG ĐẠI HỌC CÔNG THƯƠNG",
-            "Người ký": null, // Thiếu
+            "so_hieu": "1017/TB-DCT",
+            "loai_van_ban": "Thông báo",
+            "ngay_ban_hanh": "19/09/2025", // Mâu thuẫn
+            "co_quan_ban_hanh": "TRƯỜNG ĐẠI HỌC CÔNG THƯƠNG",
+            "nguoi_ky": null, // Thiếu
         },
     };
     
     // Kiểm tra các trường hợp thiếu và mâu thuẫn
     const { conflicts } = mockDataConflictCheck(result.key_values);
     const warnings = [];
-    if (result.key_values["Người ký"] === null) {
-        warnings.push({ field: "Người ký", message: "Không tìm thấy thông tin người ký trong văn bản." });
+    if (result.key_values["nguoi_ky"] === null) {
+        warnings.push({ field: "nguoi_ky", message: "Không tìm thấy thông tin người ký trong văn bản." });
     }
 
     return { 
