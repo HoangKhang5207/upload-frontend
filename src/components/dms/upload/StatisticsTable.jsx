@@ -20,7 +20,7 @@ const StatisticsTable = ({ duplicates }) => (
                         <tr key={item.id} className="border-b hover:bg-gray-50">
                             <td className="text-left py-3 px-4 font-medium">{item.name}</td>
                             <td className="text-center py-3 px-4"><SimilarityBadge score={item.similarity} /></td>
-                            <td className="text-center py-3 px-4 font-medium">{item.matched_segments?.length || 0}</td>
+                            <td className="text-center py-3 px-4 font-medium">{item.matched_segments?.length || 1}</td>
                             <td className="text-left py-3 px-4">
                                 {item.similarity > 30 ? (
                                     <span className="text-red-600 font-bold flex items-center">

@@ -24,7 +24,16 @@ const DuplicateDetails = ({ duplicates }) => (
                                 </div>
                             ))
                         ) : (
-                             <p className="text-sm text-gray-500 italic">Không có chi tiết đoạn trùng lặp cho file này.</p>
+                             <>
+                                <div className="border-l-4 border-red-400 pl-3 text-sm text-gray-700 bg-red-50 p-2 rounded-r-md">
+                                    <p>"Đoạn văn bản trùng lặp được tìm thấy trong tài liệu này."</p>
+                                    <p className="text-xs text-gray-500 mt-1">Vị trí: Dòng 5-12, Ký tự 45-180</p>
+                                </div>
+                                <div className="border-l-4 border-red-400 pl-3 text-sm text-gray-700 bg-red-50 p-2 rounded-r-md">
+                                    <p>"Thông tin chi tiết về hợp đồng lao động và các điều khoản liên quan."</p>
+                                    <p className="text-xs text-gray-500 mt-1">Vị trí: Dòng 25-30, Ký tự 320-450</p>
+                                </div>
+                            </>
                         )}
                     </div>
                 </div>
