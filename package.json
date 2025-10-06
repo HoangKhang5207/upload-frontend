@@ -10,9 +10,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ant-design/v5-patch-for-react-19": "^1.0.3",
+    "@bpmn-io/properties-panel": "^3.33.0",
     "@heroicons/react": "^2.2.0",
     "@tailwindcss/vite": "^4.1.13",
+    "antd": "^5.27.4",
     "axios": "^1.12.2",
+    "bpmn-js": "^18.7.0",
+    "bpmn-js-properties-panel": "^5.41.3",
+    "camunda-bpmn-js-behaviors": "^1.11.2",
+    "camunda-bpmn-moddle": "^7.0.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-dropzone": "^14.3.8",

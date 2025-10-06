@@ -982,3 +982,194 @@ export const mockDetailedSuggestMetadata = async (file) => {
         }
     };
 };
+
+/**
+ * (MỞ RỘNG) Giả lập API kiểm tra và kích hoạt quy trình tự động (Auto-Route).
+ * Dựa trên metadata để tìm và bắt đầu một workflow, kiểm tra quyền RBAC/ABAC.
+ */
+export const mockTriggerAutoRoute = async (file, metadata) => {
+    console.log(`[UC-84 | MOCK] Checking auto-route rules for: ${file.name} with metadata:`, metadata);
+    await sleep(1500);
+
+    const { category, confidentiality, urgency, security } = metadata;
+
+    // Giả lập thông tin người dùng hiện tại (trong thực tế sẽ lấy từ Auth Context)
+    const currentUser = {
+        userId: 1,
+        username: "nguyenvana",
+        department: "PHONG_HANH_CHINH", // Phù hợp với category=1 (Hành chính)
+        role: "TRUONG_PHONG", // Có quyền documents:distribute, documents:notify
+        permissions: ["documents:distribute", "documents:notify"]
+    };
+
+    // Giả lập kiểm tra quyền RBAC
+    const hasDistributePermission = currentUser.permissions.includes("documents:distribute");
+    const hasNotifyPermission = currentUser.permissions.includes("documents:notify");
+
+    // Giả lập kiểm tra quyền ABAC
+    const canAccessDocument = (confidentiality === "PUBLIC") || 
+                             (confidentiality === "INTERNAL" && currentUser.department === "PHONG_HANH_CHINH") ||
+                             (currentUser.role === "TRUONG_PHONG");
+
+    // Nếu không có quyền, trả về lỗi
+    if (!hasDistributePermission || !canAccessDocument) {
+        return {
+            success: false,
+            triggered: false,
+            workflow: null,
+            message: "Không đủ quyền để phân phối tài liệu này.",
+            error: "INSUFFICIENT_PERMISSIONS"
+        };
+    }
+
+    try {
+        // RULE 1: Hợp đồng (category=2) -> Gửi cho Trưởng phòng Pháp lý
+        if (String(category) === "2") { // Giả sử ID 2 là "Hợp đồng"
+            return {
+                success: true,
+                triggered: true,
+                action: "WORKFLOW_ACTIVATION",
+                workflow: {
+                    name: "Quy trình duyệt Hợp đồng",
+                    id: "WF-CONTRACT-01",
+                    processKey: "contract_approval_process",
+                    stepOrder: 1,
+                    candidateGroup: "PHONG_PHAP_LY",
+                    pCondition: "contract_type=official",
+                    steps: [
+                        { name: "Tải lên", status: "completed", user: "Người dùng", date: new Date().toISOString() },
+                        { name: "Gửi đến Phòng Pháp lý", status: "completed", user: "Hệ thống", date: new Date().toISOString() },
+                        { name: "Chờ duyệt bởi TP Pháp lý", status: "pending", user: "Lê Minh Tuấn", date: null },
+                        { name: "Lưu trữ", status: "upcoming", user: null, date: null }
+                    ]
+                },
+                notifications: [
+                    { 
+                        type: "EMAIL", 
+                        recipient: "leminhtuan@company.com", 
+                        message: "Có hợp đồng mới cần duyệt: " + metadata.title,
+                        sent: true
+                    },
+                    { 
+                        type: "SYSTEM", 
+                        recipient: "PHONG_PHAP_LY", 
+                        message: "Hợp đồng mới cần xử lý: " + metadata.title,
+                        sent: true
+                    }
+                ],
+                tags: ["hợp_đồng", "pháp_lý", "duyệt"],
+                message: "Đã tự động gửi tài liệu đến quy trình duyệt Hợp đồng.",
+            };
+        }
+
+        // RULE 2: Báo cáo tài chính (category=1) -> Gửi cho Kế toán trưởng
+        if (String(category) === "1") { // Giả sử ID 1 là "Báo cáo tài chính"
+            // Kiểm tra độ khẩn
+            const isUrgent = urgency === "Khẩn" || urgency === "Hỏa tốc";
+            
+            return {
+                success: true,
+                triggered: true,
+                action: "WORKFLOW_ACTIVATION",
+                workflow: {
+                    name: "Quy trình duyệt Báo cáo Tài chính",
+                    id: "WF-FINANCE-03",
+                    processKey: "finance_report_process",
+                    stepOrder: 1,
+                    candidateGroup: "PHONG_KE_TOAN",
+                    pCondition: isUrgent ? "priority=high" : "priority=normal",
+                    steps: [
+                        { name: "Tải lên", status: "completed", user: "Người dùng", date: new Date().toISOString() },
+                        { name: "Gửi đến Phòng Kế toán", status: "completed", user: "Hệ thống", date: new Date().toISOString() },
+                        { name: "Chờ duyệt bởi Kế toán trưởng", status: "pending", user: "Phan Thị Hoa", date: null },
+                        { name: "Phê duyệt cuối cùng bởi Giám đốc", status: "upcoming", user: "Nguyễn Văn Nam", date: null },
+                        { name: "Lưu trữ", status: "upcoming", user: null, date: null }
+                    ]
+                },
+                notifications: [
+                    { 
+                        type: "EMAIL", 
+                        recipient: "phanthihoa@company.com", 
+                        message: `Có báo cáo tài chính ${isUrgent ? 'KHẨN ' : ''}cần duyệt: ` + metadata.title,
+                        sent: true
+                    },
+                    { 
+                        type: "SYSTEM", 
+                        recipient: "PHONG_KE_TOAN", 
+                        message: `Báo cáo tài chính ${isUrgent ? 'KHẨN ' : ''}cần xử lý: ` + metadata.title,
+                        sent: true
+                    }
+                ],
+                tags: ["báo_cáo", "tài_chính", "duyệt", ...(isUrgent ? ["khẩn"] : [])],
+                message: `Đã tự động gửi tài liệu đến quy trình duyệt Báo cáo Tài chính${isUrgent ? ' (KHẨN)' : ''}.`,
+            };
+        }
+
+        // RULE 3: Tài liệu mật -> Gửi thông báo bảo mật
+        if (confidentiality === "LOCKED" || security === "Cao") {
+            return {
+                success: true,
+                triggered: true,
+                action: "SECURITY_NOTIFICATION",
+                workflow: null,
+                notifications: [
+                    { 
+                        type: "EMAIL", 
+                        recipient: "security@company.com", 
+                        message: "Tài liệu mật đã được tải lên: " + metadata.title,
+                        sent: true
+                    },
+                    { 
+                        type: "SYSTEM", 
+                        recipient: "BAN_AN_NINH", 
+                        message: "Tài liệu mật cần kiểm tra: " + metadata.title,
+                        sent: true
+                    }
+                ],
+                tags: ["bảo_mật", "hạn_chế_truy_cập"],
+                message: "Tài liệu mật đã được ghi nhận và thông báo đến bộ phận an ninh.",
+            };
+        }
+
+        // NO MATCHING RULE - Tự động phân loại theo danh mục
+        const categoryMap = {
+            "1": { name: "Hành chính", folder: "Danh mục Hành chính" },
+            "2": { name: "Hợp đồng", folder: "Danh mục Hợp đồng" },
+            "3": { name: "Kế toán", folder: "Danh mục Kế toán" },
+            "4": { name: "Nhân sự", folder: "Danh mục Nhân sự" }
+        };
+
+        const categoryInfo = categoryMap[category] || { name: "Khác", folder: "Tài liệu chung" };
+
+        return {
+            success: true,
+            triggered: true,
+            action: "AUTO_CATEGORIZATION",
+            targetFolder: categoryInfo.folder,
+            workflow: null,
+            notifications: hasNotifyPermission ? [
+                { 
+                    type: "SYSTEM", 
+                    recipient: currentUser.username, 
+                    message: `Tài liệu đã được tự động phân loại vào thư mục: ${categoryInfo.folder}`,
+                    sent: true
+                }
+            ] : [],
+            tags: [`danh_mục_${categoryInfo.name.toLowerCase()}`],
+            message: `Tài liệu đã được tự động phân loại vào thư mục: ${categoryInfo.folder}`,
+        };
+    } catch (error) {
+        // Xử lý lỗi với cơ chế retry
+        console.error("[UC-84 | MOCK] Auto-route error:", error);
+        
+        // Trong thực tế sẽ có cơ chế retry, ở đây chỉ giả lập
+        return {
+            success: false,
+            triggered: false,
+            workflow: null,
+            message: "Có lỗi xảy ra trong quá trình tự động phân loại. Tài liệu sẽ được lưu dưới dạng bản nháp.",
+            error: "AUTO_ROUTE_FAILED",
+            retryable: true // Có thể thử lại
+        };
+    }
+};

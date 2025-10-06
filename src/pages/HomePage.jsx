@@ -7,7 +7,9 @@ import {
     SparklesIcon, 
     DocumentDuplicateIcon,
     LinkIcon,
-    CreditCardIcon
+    CreditCardIcon,
+    // Adding new icon for workflow management
+    ArrowPathIcon
 } from '@heroicons/react/24/outline';
 
 const useCases = [
@@ -59,6 +61,14 @@ const useCases = [
         title: 'UC-85: Yêu cầu Trả phí',
         description: 'Mô phỏng truy cập một tài liệu yêu cầu người dùng trả phí để có thể xem nội dung.',
         color: 'rose'
+    },
+    // New card for workflow management
+    {
+        path: '/workflow-dashboard',
+        icon: ArrowPathIcon,
+        title: 'Quản lý Workflow',
+        description: 'Quản lý các quy trình xử lý tài liệu và workflow. Bao gồm: danh sách workflow, thiết kế workflow, khởi tạo quy trình và theo dõi tiến trình.',
+        color: 'cyan'
     }
 ];
 
@@ -71,6 +81,7 @@ const FeatureCard = ({ path, icon: Icon, title, description, color }) => {
         orange: 'hover:border-orange-500 hover:bg-orange-50',
         teal: 'hover:border-teal-500 hover:bg-teal-50',
         rose: 'hover:border-rose-500 hover:bg-rose-50',
+        cyan: 'hover:border-cyan-500 hover:bg-cyan-50'
     };
 
     return (
@@ -99,6 +110,21 @@ const HomePage = () => {
                 {useCases.map((uc) => (
                     <FeatureCard key={uc.path} {...uc} />
                 ))}
+            </div>
+            
+            <div className="mt-12 bg-blue-50 rounded-lg p-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">Hướng dẫn sử dụng</h2>
+                <p className="text-gray-600 mb-4">
+                    Để bắt đầu với hệ thống quản lý workflow, hãy truy cập vào chức năng "Quản lý Workflow" 
+                    và làm theo hướng dẫn trong tài liệu. Bạn có thể thiết kế sơ đồ quy trình, khởi tạo quy trình 
+                    mới và theo dõi tiến trình của các quy trình đang chạy.
+                </p>
+                <Link 
+                    to="/workflow-documentation"
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                    Xem tài liệu hướng dẫn
+                </Link>
             </div>
         </div>
     );
