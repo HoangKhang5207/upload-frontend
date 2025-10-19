@@ -903,38 +903,6 @@ export const mockFinalizeUpload = async (file, metadata) => {
     return response;
 };
 
-/**
- * (MỚI) Giả lập API kích hoạt quy trình tự động (UC-84).
- */
-export const mockTriggerAutoRoute = async (file, metadata) => {
-    console.log(`[UC-84 | MOCK] Checking auto-route rules for category: ${metadata.category}`);
-    await sleep(1000);
-
-    // RULE 1: Danh mục "Hành chính" (ID=1) -> Gửi cho Trưởng phòng Hành chính
-    if (String(metadata.category) === "1") {
-        return {
-            triggered: true,
-            workflow: {
-                name: "Quy trình duyệt Văn bản Hành chính",
-                id: "WF-ADMIN-01",
-                steps: [
-                    { name: "Tải lên", status: "completed", user: "Người dùng", date: new Date().toISOString() },
-                    { name: "Gửi đến TP Hành chính", status: "completed", user: "Hệ thống", date: new Date().toISOString() },
-                    { name: "Chờ duyệt bởi TP Hành chính", status: "pending", user: "Nguyễn Văn A", date: null },
-                    { name: "Lưu trữ", status: "upcoming", user: null, date: null }
-                ]
-            },
-            message: "Tài liệu thuộc danh mục 'Hành chính', đã tự động gửi đến quy trình duyệt của Trưởng phòng Hành chính.",
-        };
-    }
-    
-    // NO MATCHING RULE
-    return {
-        triggered: false,
-        workflow: null,
-        message: "Không tìm thấy quy trình tự động nào phù hợp. Tài liệu được lưu dưới dạng bản nháp.",
-    };
-};
 
 
 /**
