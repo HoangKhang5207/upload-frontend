@@ -1,55 +1,101 @@
 import React from 'react';
-import { DocumentDuplicateIcon } from '@heroicons/react/24/solid';
+import { Table, Button, Tooltip, Typography, Space } from 'antd';
+import { EditOutlined, CopyOutlined } from '@ant-design/icons';
+import { App } from 'antd';
+
+const { Text } = Typography;
+
+// Helper function để chuyển snake_case thành Title Case (ví dụ: so_hieu -> Số Hiệu)
+const formatKey = (key) => {
+  if (!key) return '';
+  return key
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
 
 const KeyValuePairsDisplay = ({ keyValuePairs, onEdit }) => {
-  // Chuyển đổi object thành mảng để dễ hiển thị
-  const keyValueArray = Object.entries(keyValuePairs || {}).map(([key, value]) => ({
-    key, // Giữ nguyên key snake_case
-    originalKey: key,
-    value: value === null ? '(Không có giá trị)' : String(value)
+  const { message } = App.useApp(); // Dùng message của Antd
+
+  const handleCopy = (text) => {
+    navigator.clipboard.writeText(text);
+    message.success('Đã sao chép vào clipboard!');
+  };
+
+  const columns = [
+    {
+      title: 'Key',
+      dataIndex: 'key',
+      key: 'key',
+      render: (text) => <Text strong>{formatKey(text)}</Text>,
+    },
+    {
+      title: 'Value',
+      dataIndex: 'value',
+      key: 'value',
+      render: (text) => (
+        <Tooltip title={text} placement="topLeft">
+          <Text
+            style={{ maxWidth: 250, display: 'inline-block' }}
+            ellipsis={true}
+          >
+            {text}
+          </Text>
+        </Tooltip>
+      ),
+    },
+    {
+      title: 'Hành động',
+      key: 'action',
+      align: 'center',
+      render: (_, record) => (
+        <Space size="small">
+          <Tooltip title="Chỉnh sửa">
+            <Button 
+              type="text" 
+              icon={<EditOutlined />} 
+              onClick={() => onEdit && onEdit(record.key, record.value)}
+            />
+          </Tooltip>
+          <Tooltip title="Sao chép giá trị">
+            <Button 
+              type="text" 
+              icon={<CopyOutlined />} 
+              onClick={() => handleCopy(record.value)}
+            />
+          </Tooltip>
+        </Space>
+      ),
+    },
+  ];
+
+  const dataSource = Object.entries(keyValuePairs || {}).map(([key, value]) => ({
+    key: key,
+    value: value === null ? <Text type="secondary">(Không có giá trị)</Text> : String(value),
   }));
 
   return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-        <DocumentDuplicateIcon className="h-4 w-4 mr-2 text-green-500" />
-        Key-Value Pairs Đã Trích Xuất
-      </label>
-      
-      {keyValueArray.length > 0 ? (
-        <div className="bg-white border border-gray-200 rounded-md overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Key</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hành động</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {keyValueArray.map((item, index) => (
-                <tr key={index} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.key}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700 max-w-xs break-words">{item.value}</td>
-                  <td className="px-4 py-3 text-sm">
-                    <button
-                      onClick={() => onEdit && onEdit(item.originalKey, item.value)}
-                      className="text-blue-600 hover:text-blue-900 font-medium"
-                    >
-                      Chỉnh sửa
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="bg-gray-50 border border-gray-200 rounded-md p-4 text-center text-gray-500">
-          Không có key-value pairs nào được trích xuất
-        </div>
+    <Table
+      columns={columns}
+      dataSource={dataSource}
+      pagination={false}
+      bordered
+      size="small"
+      title={() => (
+        <Text strong style={{ fontSize: '16px' }}>
+          Key-Value Pairs Đã Trích Xuất
+        </Text>
       )}
-    </div>
+      summary={() => (
+        <Table.Summary.Row>
+          <Table.Summary.Cell colSpan={3}>
+            <Text type="secondary" style={{ fontSize: '12px' }}>
+              AI gợi ý: Trích xuất tự động bằng PhoNER và UIT-VINER.
+            </Text>
+          </Table.Summary.Cell>
+        </Table.Summary.Row>
+      )}
+    />
   );
 };
 

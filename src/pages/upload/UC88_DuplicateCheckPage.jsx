@@ -1,27 +1,41 @@
 import React, { useState, useCallback } from 'react';
-import { useDropzone } from 'react-dropzone';
-import { Toaster, toast } from 'react-hot-toast';
-
-// --- Icon Imports ---
+// import { useDropzone } from 'react-dropzone'; // <-- XÓA DÒNG NÀY
 import { 
-    CloudArrowUpIcon, 
-    DocumentMagnifyingGlassIcon,
-    ExclamationTriangleIcon,
-    CheckCircleIcon,
-    ArrowPathIcon,
-    DocumentTextIcon,
-    DocumentChartBarIcon
-} from '@heroicons/react/24/solid';
+    App,
+    Upload, // <-- Đảm bảo đã import
+    Spin, 
+    Row, 
+    Col, 
+    Card, 
+    Alert, 
+    Typography, 
+    Button, 
+    Space,
+    InputNumber,
+    Radio,
+    Result,
+    Divider,
+    Form // <-- Import Form
+} from 'antd';
+import { 
+    FileSearchOutlined,
+    UploadOutlined,
+    RedoOutlined,
+    FilePdfOutlined,
+    FileDoneOutlined,
+    WarningFilled,
+    DownloadOutlined
+} from '@ant-design/icons';
 
 // --- Mock API Import ---
 import { mockDeepDuplicateCheck } from '../../api/mockUploadApi';
 
-// Component hiển thị chi tiết các đoạn trùng lặp
+// --- Component Imports (ĐÃ ĐƯỢC REFACTOR) ---
 import DuplicateDetails from '../../components/dms/upload/DuplicateDetails';
-
-// Component hiển thị bảng thống kê
 import StatisticsTable from '../../components/dms/upload/StatisticsTable';
 
+const { Title, Paragraph, Text } = Typography;
+const { Dragger } = Upload; // <-- Dùng Dragger của Antd
 
 // --- Main Page Component ---
 const UC88_DuplicateCheckPage = () => {
@@ -29,8 +43,10 @@ const UC88_DuplicateCheckPage = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [result, setResult] = useState(null);
     const [error, setError] = useState(null);
-    const [threshold, setThreshold] = useState(30); // Ngưỡng mặc định 30%
-    const [method, setMethod] = useState('fast'); // Phương pháp mặc định
+    const [threshold, setThreshold] = useState(30); 
+    const [method, setMethod] = useState('fast'); 
+
+    const { message } = App.useApp();
 
     const handleReset = () => {
         setFile(null);
@@ -39,141 +55,185 @@ const UC88_DuplicateCheckPage = () => {
         setError(null);
     };
     
-    const onDrop = useCallback((acceptedFiles) => {
+    // --- SỬA LỖI Ở ĐÂY ---
+    // 1. Xóa bỏ onDrop và hook useDropzone
+    // const onDrop = useCallback((acceptedFiles) => { ... }, []);
+    // const { getRootProps, getInputProps, isDragActive } = useDropzone({ ... });
+    
+    // 2. Tạo hàm beforeUpload cho Antd
+    const handleBeforeUpload = (selectedFile) => {
         handleReset();
-        const selectedFile = acceptedFiles[0];
         setFile(selectedFile);
-    }, []);
+        return false; // Quan trọng: Ngăn Antd tự động upload
+    };
+    // --- KẾT THÚC SỬA LỖI ---
+
 
     const handleCheck = () => {
         if (!file) {
-            toast.error("Vui lòng chọn một file để kiểm tra.");
+            message.error("Vui lòng chọn một file để kiểm tra.");
             return;
         }
         setIsProcessing(true);
         setResult(null);
+        setError(null);
 
-        toast.promise(
-            mockDeepDuplicateCheck(file),
-            {
-                loading: 'Đang phân tích sâu và đối chiếu toàn bộ CSDL...',
-                success: (apiResult) => {
-                    setResult(apiResult);
-                    setIsProcessing(false);
-                    return 'Phân tích hoàn tất!';
-                },
-                error: (err) => {
-                    setError(err.message || 'Đã có lỗi xảy ra.');
-                    setIsProcessing(false);
-                    return 'Phân tích thất bại.';
-                }
-            }
-        );
+        message.loading({ content: 'Đang phân tích sâu và đối chiếu toàn bộ CSDL...', key: 'check', duration: 0 });
+
+        mockDeepDuplicateCheck(file)
+            .then((apiResult) => {
+                setResult(apiResult);
+                setIsProcessing(false);
+                message.success({ content: 'Phân tích hoàn tất!', key: 'check' });
+            })
+            .catch((err) => {
+                setError(err.message || 'Đã có lỗi xảy ra.');
+                setIsProcessing(false);
+                message.error({ content: 'Phân tích thất bại.', key: 'check' });
+            });
     }
-
-    const { getRootProps, getInputProps, isDragActive } = useDropzone({
-        onDrop,
-        maxFiles: 1,
-        disabled: isProcessing,
-    });
     
     return (
-        <>
-            <Toaster position="top-right" />
-            <div className="max-w-6xl mx-auto">
-                <header className="text-center mb-10">
-                    <h1 className="text-4xl font-extrabold text-gray-800">
-                        UC-88: Kiểm Tra Trùng Lặp Văn Bản
-                    </h1>
-                    <p className="text-gray-600 mt-2">Phân tích sâu để đảm bảo tính duy nhất của tài liệu trong hệ thống.</p>
-                </header>
-                
-                <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-xl">
-                    {/* --- Vùng cấu hình và Upload --- */}
-                    {!result && (
-                        <>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Tải lên văn bản cần kiểm tra:</label>
-                                     <div {...getRootProps()} className={`p-8 text-center border-2 border-dashed rounded-xl cursor-pointer transition-all duration-300 ${isDragActive ? 'border-purple-500 bg-purple-50' : 'border-slate-300 hover:border-purple-400'}`}>
-                                        <input {...getInputProps()} />
-                                        <CloudArrowUpIcon className="h-12 w-12 mx-auto text-slate-400" />
+        <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+            <div style={{ textAlign: 'center', marginBottom: 40 }}>
+                <Title level={2} style={{ fontWeight: 800 }}>
+                    <FileSearchOutlined style={{ color: '#1677ff' }} /> UC-88: Kiểm Tra Trùng Lặp Văn Bản
+                </Title>
+                <Paragraph style={{ fontSize: '16px' }} type="secondary">
+                    Phân tích sâu để đảm bảo tính duy nhất của tài liệu trong hệ thống.
+                </Paragraph>
+            </div>
+            
+            <Card>
+                {!result && !error && ( // Thêm điều kiện !error
+                    <Spin spinning={isProcessing} tip="Đang phân tích...">
+                        <Row gutter={[24, 24]} align="middle">
+                            <Col xs={24} md={12}>
+                                {/* Bọc trong Form.Item để có label */}
+                                <Form.Item label="Tải lên văn bản cần kiểm tra:" required style={{marginBottom: 0}}>
+                                    {/* --- SỬA LỖI Ở ĐÂY --- */}
+                                    <Dragger 
+                                        // {...getRootProps()} // <-- XÓA DÒNG NÀY
+                                        beforeUpload={handleBeforeUpload} // <-- THÊM PROP NÀY
+                                        multiple={false} // <-- THÊM PROP NÀY
+                                        showUploadList={false} // <-- THÊM PROP NÀY
+                                        disabled={isProcessing} // <-- Giữ nguyên
+                                        style={{ 
+                                            padding: '24px', 
+                                            backgroundColor: '#fafafa' // <-- Xóa isDragActive
+                                        }}
+                                    >
+                                        <p className="ant-upload-drag-icon">
+                                            <UploadOutlined />
+                                        </p>
                                         {file ? (
-                                            <p className="mt-2 text-md font-semibold text-blue-700">{file.name}</p>
+                                            <>
+                                                <p className="ant-upload-text" style={{color: '#1677ff', fontWeight: 600}}>{file.name}</p>
+                                                <p className="ant-upload-hint">Click hoặc kéo file khác để thay thế</p>
+                                            </>
                                         ) : (
-                                            <p className="mt-2 text-md font-semibold text-slate-700">Kéo thả file hoặc click để chọn</p>
+                                            <>
+                                                <p className="ant-upload-text">Kéo thả file hoặc click để chọn</p>
+                                                <p className="ant-upload-hint">Hỗ trợ: PDF, DOCX, TXT</p>
+                                            </>
                                         )}
-                                        <p className="mt-1 text-xs text-slate-500">Hỗ trợ: PDF, DOCX, TXT</p>
-                                    </div>
-                                </div>
-                                <div className="space-y-4">
-                                     <div>
-                                        <label htmlFor="threshold" className="block text-sm font-medium text-gray-700 mb-1">Ngưỡng phát hiện (%):</label>
-                                        <input type="number" id="threshold" value={threshold} onChange={(e) => setThreshold(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md" />
-                                    </div>
-                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Phương pháp so sánh:</label>
-                                        <div className="flex gap-2">
-                                            <button onClick={() => setMethod('fast')} className={`flex-1 p-3 rounded-md font-semibold text-sm ${method === 'fast' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}>⚡️ Thường (nhanh)</button>
-                                            <button onClick={() => setMethod('deep')} className={`flex-1 p-3 rounded-md font-semibold text-sm ${method === 'deep' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}>🧠 Deep Learning (chính xác hơn)</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                             <div className="mt-8 border-t pt-6 text-center">
-                                <button onClick={handleCheck} disabled={isProcessing} className="w-full max-w-xs px-8 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 disabled:bg-gray-400 flex items-center justify-center mx-auto">
-                                    {isProcessing ? (
-                                         <ArrowPathIcon className="h-5 w-5 mr-2 animate-spin"/>
-                                    ) : (
-                                        <DocumentMagnifyingGlassIcon className="h-5 w-5 mr-2" />
-                                    )}
-                                    {isProcessing ? "Đang phân tích..." : "Kiểm tra ngay"}
-                                </button>
-                                <p className="text-xs text-gray-400 mt-2">Lưu ý: Chỉ file có tên "Dupli-Document" mới được giả lập là có trùng lặp.</p>
-                            </div>
-                        </>
-                    )}
-                    
-                    {/* --- Vùng hiển thị kết quả --- */}
-                    {result && !isProcessing && (
-                        <div className="animate-fade-in">
-                            <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-2xl font-bold text-gray-800">Kết quả kiểm tra trùng lặp</h2>
-                                 <button onClick={handleReset} className="flex items-center text-sm px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
-                                    <ArrowPathIcon className="h-4 w-4 mr-2"/> Kiểm tra file khác
-                                </button>
-                            </div>
-
-                            {!result.hasDuplicates ? (
-                                <div className="text-center p-8 bg-green-50 rounded-lg border border-green-200">
-                                    <CheckCircleIcon className="h-16 w-16 text-green-500 mx-auto" />
-                                    <h3 className="mt-4 text-2xl font-bold text-green-800">Không phát hiện trùng lặp</h3>
-                                    <p className="mt-2 text-gray-600">{result.message}</p>
-                                </div>
-                            ) : (
-                                <>
-                                    <div className="p-4 mb-6 bg-red-50 border-l-4 border-red-500">
-                                        <h3 className="text-lg font-semibold text-red-800 flex items-center">
-                                            <ExclamationTriangleIcon className="h-6 w-6 mr-2"/>
-                                            Cảnh báo: {result.message}
-                                        </h3>
-                                    </div>
+                                    </Dragger>
+                                    {/* --- KẾT THÚC SỬA LỖI --- */}
+                                </Form.Item>
+                            </Col>
+                            <Col xs={24} md={12}>
+                                <Form layout="vertical"> {/* Thêm Form để các Form.Item có layout */}
+                                    <Form.Item label="Ngưỡng phát hiện (%):" style={{ margin: 0 }}>
+                                        <InputNumber 
+                                            value={threshold} 
+                                            onChange={setThreshold} 
+                                            min={10} max={100} 
+                                            style={{ width: '100%' }} 
+                                            size="large"
+                                        />
+                                    </Form.Item>
+                                    <Form.Item label="Phương pháp so sánh:" style={{ margin: 0, marginTop: 16 }}>
+                                        <Radio.Group 
+                                            value={method} 
+                                            onChange={(e) => setMethod(e.target.value)}
+                                            optionType="button"
+                                            buttonStyle="solid"
+                                            style={{ width: '100%' }}
+                                        >
+                                            <Radio.Button value="fast" style={{ width: '50%', textAlign: 'center' }}>⚡️ Thường (Nhanh)</Radio.Button>
+                                            <Radio.Button value="deep" style={{ width: '50%', textAlign: 'center' }}>🧠 Sâu (Chính xác)</Radio.Button>
+                                        </Radio.Group>
+                                    </Form.Item>
+                                </Form>
+                            </Col>
+                        </Row>
+                        <Divider />
+                        <div style={{ textAlign: 'center' }}>
+                            <Button 
+                                type="primary" 
+                                size="large" 
+                                icon={<FileSearchOutlined />}
+                                onClick={handleCheck} 
+                                disabled={isProcessing || !file}
+                            >
+                                Kiểm tra ngay
+                            </Button>
+                            <Paragraph type="secondary" style={{fontSize: 12, marginTop: 8}}>
+                                Lưu ý: Chỉ file có tên "Dupli-Document" mới được giả lập là có trùng lặp.
+                            </Paragraph>
+                        </div>
+                    </Spin>
+                )}
+                
+                {result && !isProcessing && (
+                    <div>
+                        <Result
+                            status={result.hasDuplicates ? "error" : "success"}
+                            title={result.hasDuplicates ? "Phát hiện trùng lặp!" : "Không phát hiện trùng lặp"}
+                            subTitle={result.hasDuplicates ? result.message : "Tài liệu này là duy nhất trong hệ thống."}
+                            icon={result.hasDuplicates ? <WarningFilled /> : <FileDoneOutlined />}
+                            extra={[
+                                <Button 
+                                    type="primary" 
+                                    key="redo" 
+                                    icon={<RedoOutlined />}
+                                    onClick={handleReset}
+                                >
+                                    Kiểm tra file khác
+                                </Button>,
+                                <Button 
+                                    key="report" 
+                                    icon={<DownloadOutlined />}
+                                    disabled={!result.hasDuplicates}
+                                >
+                                    Tải báo cáo PDF
+                                </Button>,
+                            ]}
+                        >
+                            {result.hasDuplicates && (
+                                <div style={{ textAlign: 'left', maxWidth: 800, margin: '0 auto' }}>
                                     <StatisticsTable duplicates={result.duplicates} />
                                     <DuplicateDetails duplicates={result.duplicates} />
-                                    <div className="mt-8 text-center border-t pt-6">
-                                         <button className="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 flex items-center mx-auto">
-                                            <DocumentChartBarIcon className="h-5 w-5 mr-2" />
-                                            Tải báo cáo PDF chi tiết
-                                        </button>
-                                    </div>
-                                </>
+                                </div>
                             )}
-                        </div>
-                    )}
-                </div>
-            </div>
-             <style>{`.animate-fade-in { animation: fadeIn 0.5s ease-in-out; } @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
-        </>
+                        </Result>
+                    </div>
+                )}
+
+                {error && (
+                    <Result
+                        status="error"
+                        title="Phân tích thất bại"
+                        subTitle={error}
+                        extra={[
+                            <Button type="primary" key="redo" icon={<RedoOutlined />} onClick={handleReset}>
+                                Thử lại
+                            </Button>
+                        ]}
+                    />
+                )}
+            </Card>
+        </div>
     );
 };
 

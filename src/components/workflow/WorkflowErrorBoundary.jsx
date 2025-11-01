@@ -1,5 +1,8 @@
 import React from 'react';
-import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { Result, Button, Typography } from 'antd'; // Import Result
+// import { ExclamationTriangleIcon } from '@heroicons/react/24/outline'; // Xóa
+
+const { Paragraph, Text } = Typography;
 
 class WorkflowErrorBoundary extends React.Component {
   constructor(props) {
@@ -8,7 +11,7 @@ class WorkflowErrorBoundary extends React.Component {
   }
 
   static getDerivedStateFromError(error) {
-    return { hasError: true };
+    return { hasError: true, error: error };
   }
 
   componentDidCatch(error, errorInfo) {
@@ -16,8 +19,6 @@ class WorkflowErrorBoundary extends React.Component {
       error: error,
       errorInfo: errorInfo
     });
-    
-    // Log error to console
     console.error('Workflow Error Boundary caught an error:', error, errorInfo);
   }
 
@@ -28,40 +29,33 @@ class WorkflowErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="max-w-7xl mx-auto p-6">
-          <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <ExclamationTriangleIcon className="h-5 w-5 text-red-400" />
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">Đã xảy ra lỗi</h3>
-                <div className="mt-2 text-sm text-red-700">
-                  <p>Đã xảy ra lỗi khi hiển thị trang này. Vui lòng thử lại.</p>
-                  {process.env.NODE_ENV === 'development' && (
-                    <details className="mt-2">
-                      <summary className="font-medium cursor-pointer">Chi tiết lỗi</summary>
-                      <pre className="mt-2 text-xs text-red-600 overflow-auto">
-                        {this.state.error && this.state.error.toString()}
-                        <br />
-                        {this.state.errorInfo.componentStack}
-                      </pre>
-                    </details>
-                  )}
-                </div>
-                <div className="mt-4">
-                  <button
-                    type="button"
-                    onClick={this.handleRetry}
-                    className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                  >
-                    Thử lại
-                  </button>
-                </div>
-              </div>
+        <Result
+          status="error"
+          title="Đã xảy ra lỗi"
+          subTitle="Đã xảy ra lỗi khi hiển thị phần này của ứng dụng."
+          extra={[
+            <Button type="primary" key="retry" onClick={this.handleRetry}>
+              Thử lại
+            </Button>,
+          ]}
+        >
+          {process.env.NODE_ENV === 'development' && (
+            <div className="desc">
+              <Paragraph>
+                <Text strong style={{ fontSize: 16 }}>
+                  Chi tiết lỗi (Development Mode):
+                </Text>
+              </Paragraph>
+              <Paragraph style={{ textAlign: 'left', backgroundColor: '#fff0f0', padding: 16 }}>
+                <pre style={{ whiteSpace: 'pre-wrap' }}>
+                  {this.state.error && this.state.error.toString()}
+                  <br />
+                  {this.state.errorInfo && this.state.errorInfo.componentStack}
+                </pre>
+              </Paragraph>
             </div>
-          </div>
-        </div>
+          )}
+        </Result>
       );
     }
 

@@ -1,131 +1,144 @@
-import React, { useState } from 'react';
-import { toast } from 'react-hot-toast';
+import React from 'react';
+import { App, Tabs, Button, Table, Typography, Tooltip, Tag, Space, Card } from 'antd';
 import { 
-  DocumentTextIcon, 
-  ListBulletIcon, 
-  SparklesIcon, 
-  TableCellsIcon,
-  ClipboardDocumentIcon
-} from '@heroicons/react/24/solid';
+  FileTextOutlined, 
+  DatabaseOutlined, 
+  TableOutlined,
+  CopyOutlined
+} from '@ant-design/icons';
+
+const { Text, Paragraph } = Typography;
 
 const OcrResultTabs = ({ result }) => {
-    const [activeTab, setActiveTab] = useState('text');
+    const { message } = App.useApp();
 
     const copyToClipboard = (text) => {
         navigator.clipboard.writeText(text);
-        toast.success("Đã sao chép vào clipboard!");
+        message.success("Đã sao chép vào clipboard!");
     };
 
-    const renderContent = () => {
-        switch(activeTab) {
-            case 'text':
-                return (
-                    <div className="relative">
-                        <button 
-                            onClick={() => copyToClipboard(result.extractedText)} 
-                            className="absolute top-4 right-4 z-10 flex items-center text-xs px-3 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors shadow-md"
-                        >
-                            <ClipboardDocumentIcon className="h-4 w-4 mr-1"/> Sao chép
-                        </button>
-                        <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans p-6 overflow-auto max-h-[500px] bg-gray-50 rounded-b-lg">
+    // Cấu hình cột cho Key-Value Pairs
+    const kvpColumns = [
+        {
+            title: 'Key',
+            dataIndex: 'key',
+            key: 'key',
+            render: (text) => <Text strong>{text.replace(/_/g, ' ')}</Text>
+        },
+        {
+            title: 'Value',
+            dataIndex: 'value',
+            key: 'value',
+        },
+        {
+            title: 'Độ tin cậy',
+            dataIndex: 'confidence',
+            key: 'confidence',
+            render: (conf) => <Tag color="blue">{conf.toFixed(1)}%</Tag>
+        }
+    ];
+
+    // Cấu hình cột cho Bảng biểu
+    const tableColumns = (headers) => headers.map(h => ({
+        title: h,
+        dataIndex: h,
+        key: h,
+    }));
+
+    // Chuyển đổi dữ liệu bảng
+    const tableDataSource = (headers, rows) => rows.map((row, index) => {
+        let rowObj = { key: index };
+        headers.forEach((h, i) => {
+            rowObj[h] = row[i];
+        });
+        return rowObj;
+    });
+
+
+    const items = [
+        {
+            key: 'text',
+            label: (
+                <span>
+                    <FileTextOutlined /> Văn bản trích xuất
+                </span>
+            ),
+            children: (
+                <div style={{ position: 'relative' }}>
+                    <Button 
+                        icon={<CopyOutlined />}
+                        onClick={() => copyToClipboard(result.extractedText)} 
+                        style={{ position: 'absolute', top: 16, right: 16, zIndex: 1 }}
+                        ghost
+                        type="primary"
+                    >
+                        Sao chép
+                    </Button>
+                    <Paragraph 
+                        style={{ 
+                            maxHeight: 500, 
+                            overflowY: 'auto', 
+                            padding: '24px', 
+                            backgroundColor: '#fafafa',
+                            borderRadius: '8px',
+                            border: '1px solid #f0f0f0'
+                        }}
+                    >
+                        <pre style={{ whiteSpace: 'pre-wrap', margin: 0, fontFamily: 'inherit' }}>
                             {result.extractedText}
                         </pre>
-                    </div>
-                );
-            case 'kvp':
-                return (
-                     <div className="p-6 overflow-auto max-h-[500px]">
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-100">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Key</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Value</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Độ tin cậy</th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                                {result.keyValuePairs.map((kv, i) => (
-                                    <tr key={i} className="hover:bg-gray-50">
-                                        <td className="px-6 py-4 text-sm font-semibold text-gray-800">{kv.key}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-600">{kv.value}</td>
-                                        <td className="px-6 py-4 text-sm">
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                {kv.confidence.toFixed(1)}%
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                );
-            case 'tables':
-                 return (
-                     <div className="p-6 overflow-auto max-h-[500px] space-y-6">
-                         {result.tables.map((table, i) => (
-                             <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                                 <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
-                                     <h4 className="font-bold text-gray-800">{table.name}</h4>
-                                 </div>
-                                 <div className="overflow-x-auto">
-                                     <table className="min-w-full">
-                                         <thead className="bg-gray-100">
-                                             <tr>
-                                                 {table.headers.map((h, j) => (
-                                                     <th key={j} className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                                                         {h}
-                                                     </th>
-                                                 ))}
-                                             </tr>
-                                         </thead>
-                                         <tbody className="divide-y divide-gray-200">
-                                             {table.rows.map((row, k) => (
-                                                 <tr key={k} className="hover:bg-gray-50">
-                                                     {row.map((cell, l) => (
-                                                         <td key={l} className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
-                                                             {cell}
-                                                         </td>
-                                                     ))}
-                                                 </tr>
-                                             ))}
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                         ))}
-                     </div>
-                 );
+                    </Paragraph>
+                </div>
+            )
+        },
+        {
+            key: 'kvp',
+            label: (
+                <span>
+                    <DatabaseOutlined /> Key-Value Pairs
+                </span>
+            ),
+            children: (
+                <Table
+                    columns={kvpColumns}
+                    dataSource={result.keyValuePairs}
+                    rowKey="key"
+                    pagination={false}
+                    bordered
+                    size="small"
+                />
+            )
+        },
+        {
+            key: 'tables',
+            label: (
+                <span>
+                    <TableOutlined /> Bảng biểu
+                </span>
+            ),
+            children: (
+                <Space direction="vertical" style={{ width: '100%' }}>
+                    {result.tables.map((table, i) => (
+                        <Card key={i} title={table.name} size="small">
+                            <Table
+                                columns={tableColumns(table.headers)}
+                                dataSource={tableDataSource(table.headers, table.rows)}
+                                pagination={false}
+                                bordered
+                                size="small"
+                                scroll={{ x: true }} // Cho phép cuộn ngang nếu bảng quá rộng
+                            />
+                        </Card>
+                    ))}
+                </Space>
+            )
         }
-    }
-    
-    const tabs = [
-        { id: 'text', name: 'Văn bản trích xuất', icon: ListBulletIcon },
-        { id: 'kvp', name: 'Key-Value Pairs', icon: SparklesIcon },
-        { id: 'tables', name: 'Bảng biểu', icon: TableCellsIcon }
     ];
 
     return (
-        <div className="rounded-xl overflow-hidden shadow-md">
-            <div className="border-b border-gray-200 bg-white">
-                <nav className="-mb-px flex" aria-label="Tabs">
-                    {tabs.map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={`${activeTab === tab.id 
-                                ? 'border-blue-500 text-blue-600 bg-blue-50' 
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50'}
-                                flex items-center justify-center whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors duration-200 flex-1`}
-                        >
-                            <tab.icon className="h-5 w-5 mr-2" /> {tab.name}
-                        </button>
-                    ))}
-                </nav>
-            </div>
-            <div className="bg-white rounded-b-lg">
-                {renderContent()}
-            </div>
-        </div>
+        <Card bordered={false} style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+            <Tabs defaultActiveKey="text" items={items} />
+        </Card>
     );
 };
 

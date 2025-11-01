@@ -1,72 +1,113 @@
 import React, { useState } from 'react';
-import { ShieldCheckIcon } from '@heroicons/react/24/solid';
+import { Card, Radio, Button, Typography, Space, Spin, Alert } from 'antd';
+import { SafetyCertificateOutlined } from '@ant-design/icons';
+
+const { Title, Paragraph, Text } = Typography;
 
 const PackageSelection = ({ document, packages, onSelectPackage }) => {
-    // ✅ BƯỚC 2: KHỞI TẠO STATE
-    // useState must always be called, even if packages is undefined or empty.
-    const [selectedPackage, setSelectedPackage] = useState(packages && packages.length > 0 ? packages[0]?.id : '');
-
-    // ✅ BƯỚC 1: THÊM ĐIỀU KIỆN BẢO VỆ
-    // Nếu `packages` chưa được truyền xuống hoặc là một mảng rỗng,
-    // component sẽ hiển thị một thông báo tải và dừng lại, không chạy code gây lỗi.
-    if (!packages || packages.length === 0) {
-        return <div className="text-center p-10 text-gray-500">Đang tải các gói cước...</div>;
+    // Điều kiện bảo vệ (giữ nguyên)
+    if (!packages) {
+        return (
+            <div style={{ textAlign: 'center', padding: '40px' }}>
+                <Spin tip="Đang tải các gói cước..." size="large" />
+            </div>
+        );
+    }
+    
+    if (packages.length === 0) {
+        return (
+             <Alert
+                message="Lỗi tải gói cước"
+                description="Không tìm thấy gói cước nào cho tài liệu này. Vui lòng thử lại sau."
+                type="error"
+                showIcon
+            />
+        );
     }
 
+    // Bug fix từ file gốc: Lấy id của gói đầu tiên làm giá trị mặc định
+    const [selectedPackageId, setSelectedPackageId] = useState(packages[0]?.id);
+
     const handleSelection = () => {
-        if (!selectedPackage) {
-            alert("Vui lòng chọn một gói truy cập.");
+        if (!selectedPackageId) {
+            alert("Vui lòng chọn một gói truy cập."); // Sẽ thay bằng message.warning sau
             return;
         }
-        const chosenPackageObject = packages.find(p => p.id === selectedPackage);
+        const chosenPackageObject = packages.find(p => p.id === selectedPackageId);
         onSelectPackage(chosenPackageObject);
     };
 
     return (
-        <div className="max-w-4xl mx-auto animate-fade-in">
-            <h1 className="text-3xl font-bold text-gray-800 text-center">{document.name}</h1>
-            <p className="text-center text-gray-500 mt-2">Tác giả: {document.author}</p>
-            
-            <div className="mt-8 p-6 bg-gray-50 border rounded-lg">
-                <h2 className="text-xl font-semibold text-gray-700">Chọn gói truy cập</h2>
-                <p className="text-sm text-gray-500 mt-1">Để xem toàn bộ nội dung ({document.totalPages} trang), vui lòng chọn một trong các gói dưới đây.</p>
-                
-                <div className="mt-6 space-y-4">
-                    {packages.map((pkg) => (
-                        <label key={pkg.id} htmlFor={pkg.id} className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${selectedPackage === pkg.id ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-300' : 'hover:bg-gray-100'}`}>
-                            <input
-                                type="radio"
-                                id={pkg.id}
-                                name="package"
-                                value={pkg.id}
-                                checked={selectedPackage === pkg.id}
-                                onChange={(e) => setSelectedPackage(e.target.value)}
-                                className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                            />
-                            <div className="ml-4 flex-grow">
-                                <span className="font-semibold text-gray-800">{pkg.name}</span>
-                                <p className="text-sm text-gray-500">{pkg.description}</p>
-                            </div>
-                            <span className="text-lg font-bold text-blue-600">
-                                {pkg.price.toLocaleString('vi-VN')} VNĐ
-                            </span>
-                        </label>
-                    ))}
-                </div>
+        <div style={{ maxWidth: 700, margin: '0 auto' }}>
+            <div style={{ textAlign: 'center' }}>
+                <Title level={3}>{document.name}</Title>
+                <Paragraph type="secondary">Tác giả: {document.author} | {document.totalPages} trang</Paragraph>
             </div>
+            
+            <Card style={{ marginTop: 24 }}>
+                <Title level={4}>Chọn gói truy cập</Title>
+                <Paragraph type="secondary">Để xem toàn bộ nội dung, vui lòng chọn một trong các gói dưới đây.</Paragraph>
+                
+                <Radio.Group 
+                    onChange={(e) => setSelectedPackageId(e.target.value)} 
+                    value={selectedPackageId}
+                    style={{ width: '100%' }}
+                >
+                    <Space direction="vertical" style={{ width: '100%' }}>
+                        {packages.map((pkg) => (
+                            <Radio 
+                                key={pkg.id} 
+                                value={pkg.id} 
+                                style={{ 
+                                    width: '100%', 
+                                    padding: '16px', 
+                                    border: '1px solid #d9d9d9', 
+                                    borderRadius: '8px',
+                                    transition: 'all 0.3s'
+                                }}
+                                className={selectedPackageId === pkg.id ? 'ant-radio-wrapper-checked-custom' : ''}
+                            >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <Text strong>{pkg.name}</Text>
+                                        <br/>
+                                        <Text type="secondary">{pkg.description}</Text>
+                                    </div>
+                                    <Text strong style={{ fontSize: '18px', color: '#1677ff' }}>
+                                        {pkg.price.toLocaleString('vi-VN')} VNĐ
+                                    </Text>
+                                </div>
+                            </Radio>
+                        ))}
+                    </Space>
+                </Radio.Group>
+            </Card>
 
-            <div className="mt-8 text-center">
-                <button 
+            <div style={{ marginTop: 24, textAlign: 'center' }}>
+                <Button 
+                    type="primary"
+                    size="large"
                     onClick={handleSelection} 
-                    className="w-full max-w-xs px-8 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
-                    disabled={!selectedPackage}
+                    disabled={!selectedPackageId}
+                    style={{ minWidth: 200 }}
                 >
                     Tiếp tục
-                </button>
-                <p className="text-xs text-gray-400 mt-3 flex items-center justify-center">
-                    <ShieldCheckIcon className="h-4 w-4 mr-1"/> Giao dịch an toàn và bảo mật.
-                </p>
+                </Button>
+                <Paragraph type="secondary" style={{ fontSize: 12, marginTop: 12 }}>
+                    <SafetyCertificateOutlined /> Giao dịch an toàn và bảo mật.
+                </Paragraph>
             </div>
+            {/* CSS để làm Radio giống Card hơn */}
+            <style>{`
+                .ant-radio-wrapper-checked-custom {
+                    border-color: #1677ff !important;
+                    box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.2);
+                    background-color: #f0f6ff;
+                }
+                .ant-radio {
+                    display: none; // Ẩn nút radio tròn
+                }
+            `}</style>
         </div>
     );
 };

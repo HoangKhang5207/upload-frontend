@@ -1,15 +1,18 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  ArrowLeftIcon,
-  DocumentTextIcon, 
-  PencilIcon, 
-  PlayIcon,
-  ListBulletIcon
-} from '@heroicons/react/24/outline';
+  ArrowLeftOutlined,
+  DashboardOutlined, // Thay thế DocumentTextIcon
+  EditOutlined, // Thay thế PencilIcon
+  PlayCircleOutlined, // Thay thế PlayIcon
+  UnorderedListOutlined // Thay thế ListBulletIcon
+} from '@ant-design/icons';
+import { Card, Row, Col, Typography, Button, Steps, Alert } from 'antd';
 import WorkflowNavigation from '../../components/workflow/WorkflowNavigation';
 import { useWorkflow } from '../../contexts/WorkflowContext';
 import WorkflowLoading from '../../components/workflow/WorkflowLoading';
+
+const { Title, Paragraph, Text } = Typography;
 
 const WorkflowDocumentationPage = () => {
   const { state } = useWorkflow();
@@ -19,50 +22,46 @@ const WorkflowDocumentationPage = () => {
       id: 1,
       title: 'Bảng điều khiển Workflow',
       description: 'Tổng quan về các quy trình và hoạt động gần đây trong hệ thống.',
-      icon: DocumentTextIcon,
+      icon: <DashboardOutlined style={{ fontSize: '24px' }} />,
       path: '/workflow-dashboard'
     },
     {
       id: 2,
       title: 'Danh sách Workflow',
       description: 'Quản lý và xem danh sách tất cả các quy trình đã được tạo.',
-      icon: ListBulletIcon,
+      icon: <UnorderedListOutlined style={{ fontSize: '24px' }} />,
       path: '/workflow-list'
     },
     {
       id: 3,
       title: 'Thiết kế Workflow',
       description: 'Tạo và chỉnh sửa các sơ đồ quy trình xử lý tài liệu.',
-      icon: PencilIcon,
+      icon: <EditOutlined style={{ fontSize: '24px' }} />,
       path: '/bpmn-modeler'
     },
     {
       id: 4,
       title: 'Khởi tạo quy trình',
       description: 'Bắt đầu một quy trình mới dựa trên các sơ đồ đã thiết kế.',
-      icon: PlayIcon,
+      icon: <PlayCircleOutlined style={{ fontSize: '24px' }} />,
       path: '/start-workflow/1'
     }
   ];
 
   const steps = [
     {
-      id: 1,
       title: 'Tạo sơ đồ quy trình',
       description: 'Sử dụng công cụ thiết kế để tạo sơ đồ quy trình xử lý tài liệu.'
     },
     {
-      id: 2,
       title: 'Xuất bản sơ đồ',
       description: 'Xuất bản sơ đồ để có thể sử dụng trong việc khởi tạo quy trình.'
     },
     {
-      id: 3,
       title: 'Khởi tạo quy trình',
       description: 'Chọn sơ đồ đã xuất bản và khởi tạo một quy trình mới.'
     },
     {
-      id: 4,
       title: 'Theo dõi tiến trình',
       description: 'Theo dõi và quản lý các quy trình đang chạy trong hệ thống.'
     }
@@ -70,7 +69,7 @@ const WorkflowDocumentationPage = () => {
 
   if (state.loading) {
     return (
-      <div className="max-w-7xl mx-auto">
+      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <WorkflowNavigation />
         <WorkflowLoading message="Đang tải tài liệu hướng dẫn..." />
       </div>
@@ -78,78 +77,59 @@ const WorkflowDocumentationPage = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div style={{ maxWidth: 1100, margin: '0 auto' }}>
       <WorkflowNavigation />
       
-      <div className="flex items-center mb-6">
-        <Link to="/" className="mr-4 p-2 rounded-full hover:bg-gray-100">
-          <ArrowLeftIcon className="h-6 w-6 text-gray-600" />
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>
+        <Link to="/" style={{ marginRight: '16px', padding: '8px', borderRadius: '50%' }} className="hover:bg-gray-100">
+           <ArrowLeftOutlined style={{ fontSize: '20px', color: '#555' }} />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Tài liệu hướng dẫn Workflow</h1>
-          <p className="text-gray-600">Hướng dẫn sử dụng các tính năng quản lý workflow</p>
+          <Title level={3} style={{ margin: 0 }}>Tài liệu hướng dẫn Workflow</Title>
+          <Text type="secondary">Hướng dẫn sử dụng các tính năng quản lý workflow</Text>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-6 mb-8">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Giới thiệu</h2>
-        <p className="text-gray-600 mb-4">
+      <Card style={{ marginBottom: 24 }}>
+        <Title level={4}>Giới thiệu</Title>
+        <Paragraph>
           Hệ thống quản lý workflow giúp bạn tạo, quản lý và theo dõi các quy trình xử lý tài liệu 
           trong tổ chức. Với các công cụ trực quan, bạn có thể thiết kế sơ đồ quy trình, khởi tạo 
           các quy trình mới và theo dõi tiến trình của chúng.
-        </p>
+        </Paragraph>
         
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Các tính năng chính</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <Title level={4} style={{ marginTop: 32 }}>Các tính năng chính</Title>
+        <Row gutter={[24, 24]}>
           {features.map((feature) => (
-            <div key={feature.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-center mb-4">
-                <div className="flex-shrink-0 h-10 w-10 rounded-md bg-blue-100 flex items-center justify-center">
-                  <feature.icon className="h-6 w-6 text-blue-600" />
-                </div>
-                <h3 className="ml-4 text-lg font-medium text-gray-900">{feature.title}</h3>
-              </div>
-              <p className="text-gray-600 mb-4">{feature.description}</p>
-              <Link 
-                to={feature.path}
-                className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium"
-              >
-                Truy cập tính năng
-                <svg className="ml-1 h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-              </Link>
-            </div>
+            <Col xs={24} md={12} key={feature.id}>
+              <Card hoverable>
+                <Card.Meta
+                  avatar={feature.icon}
+                  title={<Link to={feature.path} style={{color: '#1677ff'}}>{feature.title}</Link>}
+                  description={feature.description}
+                />
+              </Card>
+            </Col>
           ))}
-        </div>
+        </Row>
 
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Hướng dẫn sử dụng</h2>
-        <div className="space-y-6">
-          {steps.map((step) => (
-            <div key={step.id} className="flex">
-              <div className="flex-shrink-0">
-                <div className="flex items-center justify-center h-8 w-8 rounded-full bg-blue-600 text-white">
-                  {step.id}
-                </div>
-              </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-medium text-gray-900">{step.title}</h3>
-                <p className="mt-2 text-gray-600">{step.description}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+        <Title level={4} style={{ marginTop: 32 }}>Hướng dẫn sử dụng</Title>
+        <Steps direction="vertical" current={-1} items={steps} />
+      </Card>
 
-      <div className="bg-blue-50 rounded-lg p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Lưu ý quan trọng</h2>
-        <ul className="list-disc pl-5 space-y-2 text-gray-600">
-          <li>Chỉ những sơ đồ đã xuất bản mới có thể được sử dụng để khởi tạo quy trình</li>
-          <li>Hãy đảm bảo nhập đầy đủ thông tin khi tạo hoặc chỉnh sửa sơ đồ quy trình</li>
-          <li>Có thể xem lại và chỉnh sửa các quy trình đã khởi tạo trong phần quản lý workflow</li>
-          <li>Hệ thống tự động lưu phiên làm việc khi bạn thiết kế sơ đồ</li>
-        </ul>
-      </div>
+      <Alert
+        message={<Title level={5}>Lưu ý quan trọng</Title>}
+        description={
+          <ul style={{ paddingLeft: 20, margin: 0 }}>
+            <li>Chỉ những sơ đồ đã xuất bản mới có thể được sử dụng để khởi tạo quy trình.</li>
+            <li>Hãy đảm bảo nhập đầy đủ thông tin khi tạo hoặc chỉnh sửa sơ đồ quy trình.</li>
+            <li>Có thể xem lại và chỉnh sửa các quy trình đã khởi tạo trong phần quản lý workflow.</li>
+            <li>Hệ thống tự động lưu phiên làm việc khi bạn thiết kế sơ đồ.</li>
+          </ul>
+        }
+        type="info"
+        showIcon
+      />
     </div>
   );
 };

@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
+import { Result } from 'antd';
 import { mockProcessPayment } from '../../../api/mockViewerApi';
 
-// Import các component đã có từ source code
+// Import các component đã được refactor
 import PackageSelection from './PackageSelection';
 import PaymentConfirmation from './PaymentConfirmation';
 import PaymentGateway from './PaymentGateway';
 import PaymentResult from './PaymentResult';
 
-// Component mới để xem tài liệu sau khi thanh toán thành công
+// Component mới để xem tài liệu sau khi thanh toán thành công (đã refactor)
 import VisitorAccessViewer from './VisitorAccessViewer';
 
 const PaywallFlow = ({ paywallData }) => {
@@ -29,20 +30,25 @@ const PaywallFlow = ({ paywallData }) => {
         const result = await mockProcessPayment(paywallData.document.id, selectedPackage.id, details);
         setPaymentResult(result);
         if(result.success) {
-            setPaidDocumentData(result.document);
+            // Chuẩn bị dữ liệu cho VisitorAccessViewer
+            const viewableDocument = {
+                ...result.document,
+                expiresAt: new Date(new Date().getTime() + 24 * 3600 * 1000).toISOString(), // Giả sử cho xem trong 24h
+                sharedBy: 'Hệ thống thanh toán', // Ghi đè người chia sẻ
+                watermark: `PAID - ${details.email}` // Thêm watermark email người mua
+            };
+            setPaidDocumentData(viewableDocument);
         }
         setStep('result');
     };
     
     const handleViewDocument = () => {
-        // Thêm trường expiresAt để tái sử dụng VisitorAccessViewer
-        const viewableDocument = {
-            ...paidDocumentData,
-            expiresAt: new Date(new Date().getTime() + 24 * 3600 * 1000).toISOString(), // Giả sử cho xem trong 24h
-            sharedBy: 'Hệ thống thanh toán'
-        }
-        setPaidDocumentData(viewableDocument);
         setStep('success_view');
+    }
+
+    const handleRetryPayment = () => {
+        setStep('selection'); // Quay về bước chọn gói
+        setPaymentResult(null);
     }
 
     switch (step) {
@@ -66,11 +72,17 @@ const PaywallFlow = ({ paywallData }) => {
         case 'gateway':
             return <PaymentGateway onPayment={handlePayment} amount={selectedPackage.price} />;
         case 'result':
-            return <PaymentResult result={paymentResult} onViewDocument={handleViewDocument} />;
+            return (
+                <PaymentResult 
+                    result={paymentResult} 
+                    onViewDocument={handleViewDocument}
+                    onRetry={handleRetryPayment} // Thêm hàm retry
+                />
+            );
         case 'success_view':
             return <VisitorAccessViewer documentData={paidDocumentData} />;
         default:
-            return <div>Trạng thái không hợp lệ</div>;
+            return <Result status="warning" title="Trạng thái không hợp lệ" />;
     }
 };
 

@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import '@ant-design/v5-patch-for-react-19';
 
 // --- Layout & Home ---
 import MainLayout from './components/layout/MainLayout';

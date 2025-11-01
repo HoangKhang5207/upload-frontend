@@ -1,101 +1,108 @@
 import React, { useState } from 'react';
-import { CreditCardIcon, LockClosedIcon } from '@heroicons/react/24/solid';
+import { Form, Input, Button, Row, Col, Card, Typography, Alert, Spin } from 'antd';
+import { CreditCardOutlined, LockOutlined, UserOutlined, MailOutlined, CalendarOutlined } from '@ant-design/icons';
+
+const { Title, Paragraph, Text } = Typography;
 
 const PaymentGateway = ({ amount, onPayment }) => {
-    const [cardInfo, setCardInfo] = useState({
-        number: '',
-        name: '',
-        expiry: '',
-        cvc: '',
-        email: ''
-    });
+    const [form] = Form.useForm();
     const [isProcessing, setIsProcessing] = useState(false);
 
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setCardInfo(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        // Thêm một chút validation đơn giản
-        if (!cardInfo.number || !cardInfo.name || !cardInfo.expiry || !cardInfo.cvc || !cardInfo.email) {
-            alert("Vui lòng điền đầy đủ thông tin thanh toán.");
-            return;
-        }
-        
+    const onFinish = (values) => {
         setIsProcessing(true);
-        // Gọi hàm `onPayment` được truyền từ PaywallFlow
-        // Giả lập một chút độ trễ để người dùng thấy trạng thái "đang xử lý"
+        // Giả lập độ trễ
         setTimeout(() => {
-            onPayment(cardInfo);
-            // Không cần setIsProcessing(false) ở đây vì component cha sẽ chuyển sang bước khác
-        }, 1000);
+            onPayment(values);
+            // setIsProcessing(false) // Không cần vì component cha sẽ chuyển bước
+        }, 1500);
     };
 
     return (
-        <div className="max-w-md mx-auto animate-fade-in">
-            <h2 className="text-2xl font-bold text-center text-gray-800">Cổng Thanh Toán</h2>
-            <p className="text-center text-gray-500 mt-2">Nhập thông tin thẻ để hoàn tất giao dịch.</p>
+        <div style={{ maxWidth: 450, margin: '0 auto' }}>
+            <Title level={3} style={{ textAlign: 'center' }}>Cổng Thanh Toán</Title>
+            <Paragraph type="secondary" style={{ textAlign: 'center' }}>
+                Nhập thông tin thẻ để hoàn tất giao dịch.
+            </Paragraph>
             
-            <form onSubmit={handleSubmit} className="mt-8 p-6 bg-white border rounded-lg shadow-sm space-y-4">
-                <div className="flex justify-between items-center bg-gray-50 p-3 rounded-md">
-                    <span className="font-semibold text-gray-700">Số tiền thanh toán:</span>
-                    <span className="text-2xl font-bold text-blue-600">
-                        {amount.toLocaleString('vi-VN')} VNĐ
-                    </span>
-                </div>
+            <Spin spinning={isProcessing} tip="Đang xử lý thanh toán...">
+                <Card>
+                    <Alert
+                        message={
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Text strong>Số tiền thanh toán:</Text>
+                                <Text strong style={{ fontSize: '20px', color: '#1677ff' }}>
+                                    {amount.toLocaleString('vi-VN')} VNĐ
+                                </Text>
+                            </div>
+                        }
+                        type="info"
+                        style={{ marginBottom: 24 }}
+                    />
+                    
+                    <Form form={form} layout="vertical" onFinish={onFinish}>
+                        <Form.Item
+                            name="email"
+                            label="Email nhận hóa đơn"
+                            rules={[{ required: true, type: 'email', message: 'Vui lòng nhập email hợp lệ!' }]}
+                        >
+                            <Input prefix={<MailOutlined />} placeholder="your.email@example.com" />
+                        </Form.Item>
+                        
+                        <Form.Item
+                            name="number"
+                            label="Số thẻ"
+                            rules={[{ required: true, message: 'Vui lòng nhập số thẻ!' }]}
+                        >
+                            <Input prefix={<CreditCardOutlined />} placeholder="0000 0000 0000 0000" />
+                        </Form.Item>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Email nhận hóa đơn</label>
-                    <input type="email" name="email" value={cardInfo.email} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 border rounded-md" placeholder="your.email@example.com" required />
-                </div>
-                
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Số thẻ</label>
-                    <input type="text" name="number" value={cardInfo.number} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 border rounded-md" placeholder="0000 0000 0000 0000" required />
-                </div>
+                        <Form.Item
+                            name="name"
+                            label="Tên trên thẻ"
+                            rules={[{ required: true, message: 'Vui lòng nhập tên trên thẻ!' }]}
+                        >
+                            <Input prefix={<UserOutlined />} placeholder="NGUYEN VAN A" />
+                        </Form.Item>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Tên trên thẻ</label>
-                    <input type="text" name="name" value={cardInfo.name} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 border rounded-md" placeholder="NGUYEN VAN A" required />
-                </div>
+                        <Row gutter={16}>
+                            <Col span={12}>
+                                <Form.Item
+                                    name="expiry"
+                                    label="Ngày hết hạn"
+                                    rules={[{ required: true, message: 'Nhập MM/YY!' }]}
+                                >
+                                    <Input prefix={<CalendarOutlined />} placeholder="MM/YY" />
+                                </Form.Item>
+                            </Col>
+                            <Col span={12}>
+                                <Form.Item
+                                    name="cvc"
+                                    label="CVC"
+                                    rules={[{ required: true, message: 'Nhập CVC!' }]}
+                                >
+                                    <Input.Password prefix={<LockOutlined />} placeholder="123" maxLength={3} />
+                                </Form.Item>
+                            </Col>
+                        </Row>
 
-                <div className="flex gap-4">
-                    <div className="flex-1">
-                        <label className="block text-sm font-medium text-gray-700">Ngày hết hạn (MM/YY)</label>
-                        <input type="text" name="expiry" value={cardInfo.expiry} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 border rounded-md" placeholder="MM/YY" required />
-                    </div>
-                    <div className="flex-1">
-                        <label className="block text-sm font-medium text-gray-700">CVC</label>
-                        <input type="text" name="cvc" value={cardInfo.cvc} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 border rounded-md" placeholder="123" required />
-                    </div>
-                </div>
-
-                <button 
-                    type="submit"
-                    disabled={isProcessing}
-                    className="w-full mt-4 px-6 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 flex items-center justify-center disabled:bg-gray-400"
-                >
-                    {isProcessing ? (
-                        <>
-                            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Đang xử lý...
-                        </>
-                    ) : (
-                        <>
-                            <CreditCardIcon className="h-5 w-5 mr-2" />
-                            Thanh toán
-                        </>
-                    )}
-                </button>
-            </form>
-            <p className="text-xs text-gray-400 mt-4 flex items-center justify-center">
-                <LockClosedIcon className="h-4 w-4 mr-1"/> Giao dịch của bạn được mã hóa và bảo mật.
-            </p>
+                        <Form.Item style={{ marginBottom: 0 }}>
+                            <Button 
+                                type="primary"
+                                htmlType="submit"
+                                loading={isProcessing}
+                                size="large"
+                                icon={<CreditCardOutlined />}
+                                style={{ width: '100%' }}
+                            >
+                                {isProcessing ? 'Đang xử lý...' : 'Thanh toán'}
+                            </Button>
+                        </Form.Item>
+                    </Form>
+                </Card>
+            </Spin>
+            <Paragraph type="secondary" style={{ fontSize: 12, marginTop: 16, textAlign: 'center' }}>
+                <LockOutlined /> Giao dịch của bạn được mã hóa và bảo mật.
+            </Paragraph>
         </div>
     );
 };

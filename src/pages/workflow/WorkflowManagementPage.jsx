@@ -1,16 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
-  PlusIcon, 
-  PencilIcon, 
-  TrashIcon, 
-  EyeIcon,
-  ArrowUpIcon,
-  ArrowDownIcon,
-  DocumentTextIcon,
-  CheckCircleIcon,
-  PlayIcon
-} from '@heroicons/react/24/outline';
+  PlusOutlined, 
+  EditOutlined, 
+  DeleteOutlined, 
+  EyeOutlined,
+  ArrowUpOutlined,
+  ArrowDownOutlined,
+  FileTextOutlined,
+  CheckCircleOutlined,
+  PlayCircleOutlined
+} from '@ant-design/icons';
+import { 
+  Button, 
+  Table, 
+  Tag, 
+  Space, 
+  Typography,
+  App, // Import App để dùng notification
+  Popconfirm,
+  Card
+} from 'antd';
 import * as mockWorkflowApi from '../../api/mockWorkflowApi';
 import WorkflowNavigation from '../../components/workflow/WorkflowNavigation';
 import { useWorkflow } from '../../contexts/WorkflowContext';
@@ -18,11 +28,17 @@ import WorkflowLoading from '../../components/workflow/WorkflowLoading';
 import WorkflowEmptyState from '../../components/workflow/WorkflowEmptyState';
 import ApplyWorkflowModal from '../../components/workflow/ApplyWorkflowModal';
 
+const { Title, Text } = Typography;
+
 const WorkflowManagementPage = () => {
   const { state, dispatch } = useWorkflow();
   const { workflows, loading } = state;
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [selectedWorkflow, setSelectedWorkflow] = useState(null);
+  const navigate = useNavigate();
+
+  // Lấy API notification từ Antd App Context
+  const { notification } = App.useApp();
 
   useEffect(() => {
     const fetchWorkflows = async () => {
@@ -42,52 +58,37 @@ const WorkflowManagementPage = () => {
   }, [dispatch]);
 
   const handleDelete = async (workflow) => {
-    // Check if workflow is deployed (in use)
     if (workflow.isDeployed) {
-      alert(`Không thể xóa quy trình "${workflow.name}" vì đang được sử dụng.
-
-Các task, process đang chạy:
-- Kiểm tra quyền truy cập
-- Xử lý OCR
-- Kiểm tra trùng lặp`);
+      notification.warning({
+        message: 'Không thể xóa',
+        description: `Quy trình "${workflow.name}" đang được sử dụng và không thể xóa.`,
+        placement: 'topRight',
+      });
       return;
     }
     
-    if (window.confirm(`Bạn có chắc chắn muốn xóa quy trình "${workflow.name}"?`)) {
-      try {
-        await mockWorkflowApi.deleteWorkflow(workflow.id);
-        const updatedWorkflows = workflows.filter(w => w.id !== workflow.id);
-        dispatch({ type: 'SET_WORKFLOWS', payload: updatedWorkflows });
-        
-        // Add success notification
-        dispatch({
-          type: 'ADD_NOTIFICATION',
-          payload: {
-            id: Date.now(),
-            type: 'success',
-            title: 'Thành công',
-            message: 'Quy trình đã được xóa thành công',
-            autoDismiss: true,
-            dismissTime: 3000
-          }
-        });
-      } catch (error) {
-        console.error('Error deleting workflow:', error);
-        const errorMessage = error.message || 'Có lỗi xảy ra khi xóa quy trình';
-        
-        // Add error notification
-        dispatch({
-          type: 'ADD_NOTIFICATION',
-          payload: {
-            id: Date.now(),
-            type: 'error',
-            title: 'Lỗi',
-            message: errorMessage,
-            autoDismiss: true,
-            dismissTime: 5000
-          }
-        });
-      }
+    try {
+      await mockWorkflowApi.deleteWorkflow(workflow.id);
+      const updatedWorkflows = workflows.filter(w => w.id !== workflow.id);
+      dispatch({ type: 'SET_WORKFLOWS', payload: updatedWorkflows });
+      
+      // THAY THẾ DISPATCH BẰNG NOTIFICATION CỦA ANTD
+      notification.success({
+        message: 'Thành công',
+        description: 'Quy trình đã được xóa thành công',
+        placement: 'topRight',
+      });
+
+    } catch (error) {
+      console.error('Error deleting workflow:', error);
+      const errorMessage = error.message || 'Có lỗi xảy ra khi xóa quy trình';
+      
+      // THAY THẾ DISPATCH BẰNG NOTIFICATION CỦA ANTD
+      notification.error({
+        message: 'Lỗi',
+        description: errorMessage,
+        placement: 'topRight',
+      });
     }
   };
 
@@ -97,93 +98,54 @@ Các task, process đang chạy:
   };
 
   const handleDeployWorkflow = async (workflow) => {
-    if (window.confirm(`Bạn có chắc chắn muốn triển khai quy trình "${workflow.name}"?`)) {
-      try {
-        await mockWorkflowApi.deployWorkflow(workflow.id);
-        // Refresh workflows
-        const updatedWorkflows = await mockWorkflowApi.getWorkflows();
-        dispatch({ type: 'SET_WORKFLOWS', payload: updatedWorkflows });
-        
-        // Add success notification
-        dispatch({
-          type: 'ADD_NOTIFICATION',
-          payload: {
-            id: Date.now(),
-            type: 'success',
-            title: 'Thành công',
-            message: 'Quy trình đã được triển khai thành công',
-            autoDismiss: true,
-            dismissTime: 3000
-          }
-        });
-      } catch (error) {
-        console.error('Error deploying workflow:', error);
-        const errorMessage = error.message || 'Có lỗi xảy ra khi triển khai quy trình';
-        
-        // Add error notification
-        dispatch({
-          type: 'ADD_NOTIFICATION',
-          payload: {
-            id: Date.now(),
-            type: 'error',
-            title: 'Lỗi',
-            message: errorMessage,
-            autoDismiss: true,
-            dismissTime: 5000
-          }
-        });
-      }
+    try {
+      await mockWorkflowApi.deployWorkflow(workflow.id);
+      const updatedWorkflows = await mockWorkflowApi.getWorkflows();
+      dispatch({ type: 'SET_WORKFLOWS', payload: updatedWorkflows });
+      
+      // THAY THẾ DISPATCH BẰNG NOTIFICATION CỦA ANTD
+      notification.success({
+        message: 'Thành công',
+        description: 'Quy trình đã được triển khai thành công',
+        placement: 'topRight',
+      });
+    } catch (error) {
+      console.error('Error deploying workflow:', error);
+      const errorMessage = error.message || 'Có lỗi xảy ra khi triển khai quy trình';
+      
+      // THAY THẾ DISPATCH BẰNG NOTIFICATION CỦA ANTD
+      notification.error({
+        message: 'Lỗi',
+        description: errorMessage,
+        placement: 'topRight',
+      });
     }
   };
 
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('vi-VN');
+    return new Date(dateString).toLocaleString('vi-VN');
   };
 
   const getDocumentType = (type) => {
     if (type === '1') {
-      return (
-        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-          <ArrowUpIcon className="h-3 w-3 mr-1" />
-          Văn bản đi
-        </span>
-      );
+      return <Tag icon={<ArrowUpOutlined />} color="blue">Văn bản đi</Tag>;
     } else if (type === '2') {
-      return (
-        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-          <ArrowDownIcon className="h-3 w-3 mr-1" />
-          Văn bản đến
-        </span>
-      );
+      return <Tag icon={<ArrowDownOutlined />} color="green">Văn bản đến</Tag>;
     } else {
-      return (
-        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-          <DocumentTextIcon className="h-3 w-3 mr-1" />
-          Khác
-        </span>
-      );
+      return <Tag icon={<FileTextOutlined />} color="default">Khác</Tag>;
     }
   };
 
   const getStatusBadge = (status) => {
     if (status === 'published') {
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-          Đã xuất bản
-        </span>
-      );
+      return <Tag color="success">Đã xuất bản</Tag>;
     } else {
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-          Bản nháp
-        </span>
-      );
+      return <Tag color="warning">Bản nháp</Tag>;
     }
   };
 
   const handleActionSuccess = () => {
-    // Refresh workflows after successful action
+    // Refresh workflows
     const fetchWorkflows = async () => {
       try {
         const data = await mockWorkflowApi.getWorkflows();
@@ -193,13 +155,82 @@ Các task, process đang chạy:
         dispatch({ type: 'SET_ERROR', payload: 'Có lỗi xảy ra khi tải danh sách quy trình' });
       }
     };
-    
     fetchWorkflows();
   };
+  
+  const columns = [
+    {
+      title: 'Tên quy trình',
+      dataIndex: 'name',
+      key: 'name',
+      render: (text) => <Text strong>{text}</Text>,
+    },
+    {
+      title: 'Mô tả',
+      dataIndex: 'description',
+      key: 'description',
+    },
+    {
+      title: 'Thể loại',
+      dataIndex: 'documentType',
+      key: 'documentType',
+      render: getDocumentType,
+    },
+    {
+      title: 'Trạng thái',
+      key: 'status',
+      render: (record) => (
+        <Space>
+          {getStatusBadge(record.status)}
+          {record.isDeployed && <Tag color="red">Đang sử dụng</Tag>}
+        </Space>
+      )
+    },
+    {
+      title: 'Cập nhật',
+      dataIndex: 'updatedAt',
+      key: 'updatedAt',
+      render: formatDate,
+    },
+    {
+      title: 'Thao tác',
+      key: 'action',
+      align: 'right',
+      render: (record) => (
+        <Space size="small">
+          <Button type="text" icon={<EyeOutlined />} onClick={() => navigate(`/workflow-detail/${record.id}`)} title="Xem chi tiết" />
+          <Button type="text" icon={<EditOutlined />} onClick={() => navigate(`/bpmn-modeler/${record.id}/edit`)} title="Chỉnh sửa" />
+          {!record.isDeployed && (
+            <Button type="text" icon={<CheckCircleOutlined style={{color: 'green'}} />} onClick={() => handleApplyWorkflow(record)} title="Áp dụng" />
+          )}
+          {!record.isDeployed && (
+            <Popconfirm
+              title={`Triển khai quy trình "${record.name}"?`}
+              onConfirm={() => handleDeployWorkflow(record)}
+              okText="Đồng ý"
+              cancelText="Hủy"
+            >
+              <Button type="text" icon={<PlayCircleOutlined style={{color: 'purple'}} />} title="Triển khai" />
+            </Popconfirm>
+          )}
+          <Popconfirm
+            title={`Xóa quy trình "${record.name}"?`}
+            description="Hành động này không thể hoàn tác."
+            onConfirm={() => handleDelete(record)}
+            okText="Xóa"
+            cancelText="Hủy"
+            disabled={record.isDeployed}
+          >
+            <Button type="text" danger icon={<DeleteOutlined />} disabled={record.isDeployed} title={record.isDeployed ? "Không thể xóa" : "Xóa"} />
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto">
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         <WorkflowNavigation />
         <WorkflowLoading message="Đang tải danh sách quy trình..." />
       </div>
@@ -207,117 +238,30 @@ Các task, process đang chạy:
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div style={{ maxWidth: 1200, margin: '0 auto' }}>
       <WorkflowNavigation />
       
-      <div className="flex justify-between items-center mb-6">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Quản lý Workflow</h1>
-          <p className="mt-2 text-gray-600">Danh sách các quy trình xử lý</p>
+          <Title level={3} style={{ margin: 0 }}>Quản lý Workflow</Title>
+          <Text type="secondary">Danh sách các quy trình xử lý</Text>
         </div>
-        <Link 
-          to="/bpmn-modeler"
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          <PlusIcon className="h-5 w-5 mr-2" />
-          Tạo mới
+        <Link to="/bpmn-modeler">
+          <Button type="primary" icon={<PlusOutlined />} size="large">
+            Tạo mới
+          </Button>
         </Link>
       </div>
 
       {workflows.length > 0 ? (
-        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Tên quy trình
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Mô tả
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Thể loại
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Trạng thái
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Cập nhật
-                </th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Thao tác
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {workflows.map((workflow) => (
-                <tr key={workflow.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{workflow.name}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-500">{workflow.description}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {getDocumentType(workflow.documentType)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center space-x-2">
-                      {getStatusBadge(workflow.status)}
-                      {workflow.isDeployed && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                          Đang sử dụng
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatDate(workflow.updatedAt)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex justify-end space-x-2">
-                      <Link to={`/workflow-detail/${workflow.id}`} className="text-blue-600 hover:text-blue-900">
-                        <EyeIcon className="h-5 w-5" />
-                      </Link>
-                      <Link to={`/bpmn-modeler/${workflow.id}`} className="text-indigo-600 hover:text-indigo-900">
-                        <EyeIcon className="h-5 w-5" />
-                      </Link>
-                      <Link to={`/bpmn-modeler/${workflow.id}/edit`} className="text-indigo-600 hover:text-indigo-900">
-                        <PencilIcon className="h-5 w-5" />
-                      </Link>
-                      {!workflow.isDeployed && (
-                        <button 
-                          onClick={() => handleApplyWorkflow(workflow)}
-                          className="text-green-600 hover:text-green-900"
-                          title="Áp dụng workflow"
-                        >
-                          <CheckCircleIcon className="h-5 w-5" />
-                        </button>
-                      )}
-                      {!workflow.isDeployed && (
-                        <button 
-                          onClick={() => handleDeployWorkflow(workflow)}
-                          className="text-purple-600 hover:text-purple-900"
-                          title="Triển khai workflow"
-                        >
-                          <PlayIcon className="h-5 w-5" />
-                        </button>
-                      )}
-                      <button 
-                        onClick={() => handleDelete(workflow)}
-                        className={`hover:text-red-900 ${workflow.isDeployed ? 'text-gray-400 cursor-not-allowed' : 'text-red-600'}`}
-                        disabled={workflow.isDeployed}
-                        title={workflow.isDeployed ? "Không thể xóa workflow đang sử dụng" : "Xóa workflow"}
-                      >
-                        <TrashIcon className="h-5 w-5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Card bodyStyle={{ padding: 0 }}>
+          <Table
+            columns={columns}
+            dataSource={workflows}
+            rowKey="id"
+            loading={loading}
+          />
+        </Card>
       ) : (
         <WorkflowEmptyState 
           title="Không có quy trình nào" 

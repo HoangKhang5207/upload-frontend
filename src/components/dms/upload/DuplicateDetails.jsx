@@ -1,45 +1,67 @@
 import React from 'react';
-import { DocumentTextIcon } from '@heroicons/react/24/solid';
+import { Collapse, Descriptions, Typography, Tag, Space } from 'antd';
+import { FileTextOutlined } from '@ant-design/icons';
 import SimilarityBadge from './SimilarityBadge';
 
+const { Panel } = Collapse;
+const { Text, Paragraph } = Typography;
+
 const DuplicateDetails = ({ duplicates }) => (
-    <div className="mt-8">
-        <h3 className="text-xl font-bold text-gray-800 mb-4">Chi tiết các đoạn trùng lặp</h3>
-        <div className="space-y-6">
-            {duplicates.map(item => (
-                <div key={item.id} className="bg-white border border-gray-200 rounded-lg p-4">
-                    <div className="flex justify-between items-center mb-3">
-                        <p className="font-bold text-blue-700 flex items-center">
-                            <DocumentTextIcon className="h-5 w-5 mr-2" />
-                            {item.name}
-                        </p>
-                        <SimilarityBadge score={item.similarity} />
-                    </div>
-                    <div className="border-t pt-3 space-y-3">
-                         {item.matched_segments && item.matched_segments.length > 0 ? (
-                            item.matched_segments.map((segment, index) => (
-                                <div key={index} className="border-l-4 border-red-400 pl-3 text-sm text-gray-700 bg-red-50 p-2 rounded-r-md">
-                                    <p>"{segment.text}"</p>
-                                    <p className="text-xs text-gray-500 mt-1">Vị trí: {segment.start_pos} - {segment.end_pos}</p>
-                                </div>
-                            ))
-                        ) : (
-                             <>
-                                <div className="border-l-4 border-red-400 pl-3 text-sm text-gray-700 bg-red-50 p-2 rounded-r-md">
-                                    <p>"Đoạn văn bản trùng lặp được tìm thấy trong tài liệu này."</p>
-                                    <p className="text-xs text-gray-500 mt-1">Vị trí: Dòng 5-12, Ký tự 45-180</p>
-                                </div>
-                                <div className="border-l-4 border-red-400 pl-3 text-sm text-gray-700 bg-red-50 p-2 rounded-r-md">
-                                    <p>"Thông tin chi tiết về hợp đồng lao động và các điều khoản liên quan."</p>
-                                    <p className="text-xs text-gray-500 mt-1">Vị trí: Dòng 25-30, Ký tự 320-450</p>
-                                </div>
-                            </>
-                        )}
-                    </div>
-                </div>
-            ))}
-        </div>
-    </div>
+  <div style={{ marginTop: 24 }}>
+    <Text strong style={{ fontSize: '16px', display: 'block', marginBottom: 16 }}>
+      Chi tiết các đoạn trùng lặp
+    </Text>
+    <Collapse accordion>
+      {duplicates.map(item => (
+        <Panel
+          key={item.id}
+          header={
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+              <Space>
+                <FileTextOutlined />
+                <Text strong>{item.name}</Text>
+              </Space>
+              <SimilarityBadge score={item.similarity} />
+            </div>
+          }
+        >
+          <Descriptions bordered column={1} size="small">
+            <Descriptions.Item label="Chủ sở hữu">{item.owner}</Descriptions.Item>
+            <Descriptions.Item label="Ngày tải lên">{new Date(item.uploadDate).toLocaleDateString('vi-VN')}</Descriptions.Item>
+            <Descriptions.Item label="Đường dẫn"><Text code>{item.path}</Text></Descriptions.Item>
+            <Descriptions.Item label="Loại trùng khớp"><Tag>{item.type.replace('_', ' ')}</Tag></Descriptions.Item>
+          </Descriptions>
+
+          <Text strong style={{ marginTop: 16, display: 'block' }}>Các đoạn văn bản trùng lặp:</Text>
+          <div style={{ maxHeight: 200, overflowY: 'auto', marginTop: 8, padding: '8px 12px', backgroundColor: '#fffbe6', borderRadius: '4px', border: '1px solid #ffe58f' }}>
+            {item.matched_segments && item.matched_segments.length > 0 ? (
+              item.matched_segments.map((segment, index) => (
+                <Paragraph key={index} style={{ borderLeft: '3px solid #faad14', paddingLeft: 8, marginBottom: 8 }}>
+                  <Text type="secondary">"{segment.text}"</Text>
+                  <br />
+                  <Text italic style={{ fontSize: 12 }}>Vị trí: {segment.start_pos} - {segment.end_pos}</Text>
+                </Paragraph>
+              ))
+            ) : (
+              // Fallback data
+              <>
+                <Paragraph style={{ borderLeft: '3px solid #faad14', paddingLeft: 8, marginBottom: 8 }}>
+                  <Text type="secondary">"Đoạn văn bản trùng lặp được tìm thấy trong tài liệu này."</Text>
+                  <br />
+                  <Text italic style={{ fontSize: 12 }}>Vị trí: Dòng 5-12, Ký tự 45-180</Text>
+                </Paragraph>
+                <Paragraph style={{ borderLeft: '3px solid #faad14', paddingLeft: 8, marginBottom: 8 }}>
+                  <Text type="secondary">"Thông tin chi tiết về hợp đồng lao động và các điều khoản liên quan."</Text>
+                  <br />
+                  <Text italic style={{ fontSize: 12 }}>Vị trí: Dòng 25-30, Ký tự 320-450</Text>
+                </Paragraph>
+              </>
+            )}
+          </div>
+        </Panel>
+      ))}
+    </Collapse>
+  </div>
 );
 
 export default DuplicateDetails;

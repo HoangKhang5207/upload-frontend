@@ -1,66 +1,80 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  DocumentTextIcon, 
-  PencilIcon, 
-  PlayIcon,
-  ListBulletIcon,
-  ArrowTrendingUpIcon,
-  CalendarIcon,
-  UserGroupIcon
-} from '@heroicons/react/24/outline';
+  Row, 
+  Col, 
+  Card, 
+  Statistic, 
+  Table, 
+  List, 
+  Typography, 
+  Tag, 
+  Avatar,
+  Space,
+  Button
+} from 'antd';
+import { 
+  FileTextOutlined, 
+  EditOutlined, 
+  PlayCircleOutlined,
+  UnorderedListOutlined,
+  LineChartOutlined, // Thay thế ArrowTrendingUpIcon
+  CalendarOutlined,
+  UsergroupAddOutlined, // Thay thế UserGroupIcon
+  SyncOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined
+} from '@ant-design/icons';
 import * as mockWorkflowApi from '../../api/mockWorkflowApi';
-import WorkflowNavigation from '../../components/workflow/WorkflowNavigation';
+import WorkflowNavigation from '../../components/workflow/WorkflowNavigation'; // Đã refactor
 import { useWorkflow } from '../../contexts/WorkflowContext';
-import WorkflowLoading from '../../components/workflow/WorkflowLoading';
+import WorkflowLoading from '../../components/workflow/WorkflowLoading'; // Đã refactor
 
+const { Title, Text, Paragraph } = Typography;
+
+// Dữ liệu stats với icon của Antd
 const stats = [
-  { id: 1, name: 'Tổng số quy trình', value: '12', icon: DocumentTextIcon, color: 'bg-blue-500' },
-  { id: 2, name: 'Quy trình đang chạy', value: '5', icon: ArrowTrendingUpIcon, color: 'bg-green-500' },
-  { id: 3, name: 'Quy trình đã hoàn thành', value: '42', icon: CalendarIcon, color: 'bg-purple-500' },
-  { id: 4, name: 'Người dùng', value: '24', icon: UserGroupIcon, color: 'bg-yellow-500' },
+  { id: 1, name: 'Tổng số quy trình', value: '12', icon: <FileTextOutlined />, color: '#1677ff' },
+  { id: 2, name: 'Quy trình đang chạy', value: '5', icon: <LineChartOutlined />, color: '#52c41a' },
+  { id: 3, name: 'Quy trình đã hoàn thành', value: '42', icon: <CalendarOutlined />, color: '#722ed1' },
+  { id: 4, name: 'Người dùng', value: '24', icon: <UsergroupAddOutlined />, color: '#faad14' },
 ];
 
 const recentWorkflows = [
-  {
-    id: 1,
-    name: 'Quy trình xử lý văn bản đi',
-    status: 'running',
-    assignee: 'Nguyễn Văn A',
-    dueDate: '2023-05-20',
-  },
-  {
-    id: 2,
-    name: 'Quy trình phê duyệt hợp đồng',
-    status: 'completed',
-    assignee: 'Trần Thị B',
-    dueDate: '2023-05-18',
-  },
-  {
-    id: 3,
-    name: 'Quy trình xử lý đơn nghỉ phép',
-    status: 'pending',
-    assignee: 'Lê Văn C',
-    dueDate: '2023-05-22',
-  },
+  { id: 1, name: 'Quy trình xử lý văn bản đi', status: 'running', assignee: 'Nguyễn Văn A', dueDate: '2023-05-20' },
+  { id: 2, name: 'Quy trình phê duyệt hợp đồng', status: 'completed', assignee: 'Trần Thị B', dueDate: '2023-05-18' },
+  { id: 3, name: 'Quy trình xử lý đơn nghỉ phép', status: 'pending', assignee: 'Lê Văn C', dueDate: '2023-05-22' },
+];
+
+// Dữ liệu mock cho Hoạt động gần đây
+const recentActivity = [
+    { id: 1, user: 'Nguyễn Văn A', action: 'Đã cập nhật quy trình xử lý văn bản đi', time: '2 giờ trước', icon: <EditOutlined />, color: 'blue' },
+    { id: 2, user: 'Trần Thị B', action: 'Đã khởi tạo quy trình phê duyệt hợp đồng', time: '5 giờ trước', icon: <PlayCircleOutlined />, color: 'green' },
+];
+
+// Dữ liệu mock cho Hành động nhanh
+const quickActions = [
+    { name: 'Danh sách Workflow', href: '/workflow-list', icon: <UnorderedListOutlined /> },
+    { name: 'Thiết kế Workflow', href: '/bpmn-modeler', icon: <EditOutlined /> },
+    { name: 'Khởi tạo quy trình', href: '/start-workflow/1', icon: <PlayCircleOutlined /> },
+    { name: 'Quản lý Workflow', href: '/workflow-management', icon: <FileTextOutlined /> },
 ];
 
 const getStatusBadge = (status) => {
   switch (status) {
     case 'running':
-      return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Đang chạy</span>;
+      return <Tag icon={<SyncOutlined spin />} color="processing">Đang chạy</Tag>;
     case 'completed':
-      return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Đã hoàn thành</span>;
+      return <Tag icon={<CheckCircleOutlined />} color="success">Đã hoàn thành</Tag>;
     case 'pending':
-      return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Chờ xử lý</span>;
+      return <Tag icon={<ClockCircleOutlined />} color="warning">Chờ xử lý</Tag>;
     default:
-      return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Không xác định</span>;
+      return <Tag color="default">Không xác định</Tag>;
   }
 };
 
 const WorkflowDashboardPage = () => {
   const { state, dispatch } = useWorkflow();
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchWorkflows = async () => {
@@ -79,9 +93,16 @@ const WorkflowDashboardPage = () => {
     fetchWorkflows();
   }, [dispatch]);
 
+  const columns = [
+    { title: 'Tên quy trình', dataIndex: 'name', key: 'name', render: (text) => <Text strong>{text}</Text> },
+    { title: 'Trạng thái', dataIndex: 'status', key: 'status', render: getStatusBadge },
+    { title: 'Người phụ trách', dataIndex: 'assignee', key: 'assignee' },
+    { title: 'Ngày hết hạn', dataIndex: 'dueDate', key: 'dueDate' },
+  ];
+
   if (state.loading) {
     return (
-      <div className="max-w-7xl mx-auto">
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         <WorkflowNavigation />
         <WorkflowLoading message="Đang tải bảng điều khiển..." />
       </div>
@@ -89,168 +110,84 @@ const WorkflowDashboardPage = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div style={{ maxWidth: 1200, margin: '0 auto' }}>
       <WorkflowNavigation />
       
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Bảng điều khiển Workflow</h1>
-        <p className="mt-2 text-gray-600">Tổng quan về các quy trình và hoạt động gần đây</p>
+      <div style={{ marginBottom: 24 }}>
+        <Title level={3} style={{ margin: 0 }}>Bảng điều khiển Workflow</Title>
+        <Text type="secondary">Tổng quan về các quy trình và hoạt động gần đây</Text>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         {stats.map((stat) => (
-          <div key={stat.id} className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className={`flex-shrink-0 rounded-md p-3 ${stat.color}`}>
-                  <stat.icon className="h-6 w-6 text-white" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">{stat.name}</dt>
-                    <dd className="flex items-baseline">
-                      <div className="text-2xl font-semibold text-gray-900">{stat.value}</div>
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
+          <Col xs={24} sm={12} lg={6} key={stat.id}>
+            <Card>
+              <Statistic
+                title={stat.name}
+                value={stat.value}
+                prefix={<Avatar style={{ backgroundColor: stat.color }} icon={stat.icon} />}
+              />
+            </Card>
+          </Col>
         ))}
-      </div>
+      </Row>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <Row gutter={[24, 24]}>
         {/* Recent Workflows */}
-        <div className="lg:col-span-2">
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-            <div className="px-4 py-5 sm:px-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Quy trình gần đây</h3>
-              <p className="mt-1 text-sm text-gray-500">Danh sách các quy trình được khởi tạo gần đây</p>
-            </div>
-            <div className="border-t border-gray-200">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tên quy trình
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Trạng thái
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Người phụ trách
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Ngày hết hạn
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {recentWorkflows.map((workflow) => (
-                    <tr key={workflow.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {workflow.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {getStatusBadge(workflow.status)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {workflow.assignee}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {workflow.dueDate}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+        <Col xs={24} lg={16}>
+          <Card title="Quy trình gần đây">
+            <Table
+              columns={columns}
+              dataSource={recentWorkflows}
+              rowKey="id"
+              pagination={false}
+              size="small"
+            />
+          </Card>
+        </Col>
 
-        {/* Quick Actions */}
-        <div>
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-            <div className="px-4 py-5 sm:px-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Hành động nhanh</h3>
-              <p className="mt-1 text-sm text-gray-500">Các thao tác thường dùng</p>
-            </div>
-            <div className="border-t border-gray-200">
-              <nav className="space-y-1">
-                <Link
-                  to="/workflow-list"
-                  className="flex items-center px-4 py-3 text-sm font-medium border-l-4 border-transparent hover:bg-gray-50 hover:border-gray-300"
-                >
-                  <ListBulletIcon className="flex-shrink-0 h-5 w-5 text-gray-400 mr-3" />
-                  <span className="truncate">Danh sách Workflow</span>
-                </Link>
-                <Link
-                  to="/bpmn-modeler"
-                  className="flex items-center px-4 py-3 text-sm font-medium border-l-4 border-transparent hover:bg-gray-50 hover:border-gray-300"
-                >
-                  <PencilIcon className="flex-shrink-0 h-5 w-5 text-gray-400 mr-3" />
-                  <span className="truncate">Thiết kế Workflow</span>
-                </Link>
-                <Link
-                  to="/start-workflow/1"
-                  className="flex items-center px-4 py-3 text-sm font-medium border-l-4 border-transparent hover:bg-gray-50 hover:border-gray-300"
-                >
-                  <PlayIcon className="flex-shrink-0 h-5 w-5 text-gray-400 mr-3" />
-                  <span className="truncate">Khởi tạo quy trình</span>
-                </Link>
-                <Link
-                  to="/workflow-management"
-                  className="flex items-center px-4 py-3 text-sm font-medium border-l-4 border-transparent hover:bg-gray-50 hover:border-gray-300"
-                >
-                  <DocumentTextIcon className="flex-shrink-0 h-5 w-5 text-gray-400 mr-3" />
-                  <span className="truncate">Quản lý Workflow</span>
-                </Link>
-              </nav>
-            </div>
-          </div>
+        {/* Quick Actions & Recent Activity */}
+        <Col xs={24} lg={8}>
+          <Space direction="vertical" style={{ width: '100%' }} size="large">
+            <Card title="Hành động nhanh">
+              <List
+                dataSource={quickActions}
+                renderItem={(item) => (
+                  <List.Item>
+                    <Link to={item.href} style={{ width: '100%' }}>
+                      <Button icon={item.icon} type="text" style={{ width: '100%', textAlign: 'left' }}>
+                        {item.name}
+                      </Button>
+                    </Link>
+                  </List.Item>
+                )}
+              />
+            </Card>
 
-          {/* Recent Activity */}
-          <div className="mt-6 bg-white shadow overflow-hidden sm:rounded-lg">
-            <div className="px-4 py-5 sm:px-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Hoạt động gần đây</h3>
-              <p className="mt-1 text-sm text-gray-500">Các thay đổi gần đây trong hệ thống</p>
-            </div>
-            <div className="border-t border-gray-200">
-              <ul className="divide-y divide-gray-200">
-                <li className="px-4 py-4">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0">
-                      <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                        <PencilIcon className="h-4 w-4 text-blue-600" />
-                      </div>
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-sm font-medium text-gray-900">Nguyễn Văn A</p>
-                      <p className="text-sm text-gray-500">Đã cập nhật quy trình xử lý văn bản đi</p>
-                      <p className="text-xs text-gray-400">2 giờ trước</p>
-                    </div>
-                  </div>
-                </li>
-                <li className="px-4 py-4">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0">
-                      <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                        <PlayIcon className="h-4 w-4 text-green-600" />
-                      </div>
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-sm font-medium text-gray-900">Trần Thị B</p>
-                      <p className="text-sm text-gray-500">Đã khởi tạo quy trình phê duyệt hợp đồng</p>
-                      <p className="text-xs text-gray-400">5 giờ trước</p>
-                    </div>
-                  </div>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
+            <Card title="Hoạt động gần đây">
+              <List
+                dataSource={recentActivity}
+                renderItem={(item) => (
+                  <List.Item>
+                    <List.Item.Meta
+                      avatar={<Avatar style={{ backgroundColor: item.color }} icon={item.icon} />}
+                      title={<Text strong>{item.user}</Text>}
+                      description={
+                        <>
+                          <Text>{item.action}</Text>
+                          <br />
+                          <Text type="secondary" style={{ fontSize: 12 }}>{item.time}</Text>
+                        </>
+                      }
+                    />
+                  </List.Item>
+                )}
+              />
+            </Card>
+          </Space>
+        </Col>
+      </Row>
     </div>
   );
 };

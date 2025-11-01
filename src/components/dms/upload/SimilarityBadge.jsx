@@ -1,15 +1,22 @@
 import React from 'react';
+import { Tag } from 'antd';
 
 const SimilarityBadge = ({ score }) => {
-    let bgColor, text;
-    if (score > 90) {
-        bgColor = 'bg-red-100 text-red-800'; text = `${score.toFixed(2)}%`;
-    } else if (score > 30) {
-        bgColor = 'bg-yellow-100 text-yellow-800'; text = `${score.toFixed(2)}%`;
+    let color, text;
+    const numericScore = parseFloat(score) || 0; // Đảm bảo score là số
+
+    if (numericScore > 90) {
+        color = 'error'; // Antd color for red
+        text = `${numericScore.toFixed(2)}%`;
+    } else if (numericScore > 30) {
+        color = 'warning'; // Antd color for yellow
+        text = `${numericScore.toFixed(2)}%`;
     } else {
-        bgColor = 'bg-green-100 text-green-800'; text = `${score.toFixed(2)}%`;
+        color = 'success'; // Antd color for green
+        text = `${numericScore.toFixed(2)}%`;
     }
-    return <span className={`px-3 py-1 text-sm font-bold rounded-full ${bgColor}`}>{text}</span>;
+    
+    return <Tag color={color} style={{ fontSize: '14px', padding: '4px 8px', fontWeight: 'bold' }}>{text}</Tag>;
 };
 
 export default SimilarityBadge;

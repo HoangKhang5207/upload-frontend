@@ -1,79 +1,119 @@
-import React, { useState, useEffect } from 'react';
-import { ClockIcon, UserCircleIcon, ShareIcon, ArrowLeftIcon, ArrowRightIcon, LockClosedIcon } from '@heroicons/react/24/solid';
+import React from 'react';
+import { Layout, Button, Pagination, Statistic, Tag, Typography, Space, Tooltip, Result } from 'antd';
+import { UserOutlined, ClockCircleOutlined, DownloadOutlined, LockOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 
-// Custom hook for countdown timer
-const useCountdown = (targetDate) => {
-    const countDownDate = new Date(targetDate).getTime();
-    const [countDown, setCountDown] = useState(countDownDate - new Date().getTime());
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setCountDown(countDownDate - new Date().getTime());
-        }, 1000);
-        return () => clearInterval(interval);
-    }, [countDownDate]);
-
-    const days = Math.floor(countDown / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((countDown % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((countDown % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((countDown % (1000 * 60)) / 1000);
-
-    return { days, hours, minutes, seconds, isExpired: countDown < 0 };
-};
-
+const { Header, Content, Footer } = Layout;
+const { Title, Text, Paragraph } = Typography;
+const { Countdown } = Statistic;
 
 const VisitorAccessViewer = ({ documentData }) => {
-    const [currentPage, setCurrentPage] = useState(1);
-    const { days, hours, minutes, seconds, isExpired } = useCountdown(documentData.expiresAt);
+    // Component này giờ nhận documentData đã được thanh toán (từ PaywallFlow) 
+    // hoặc documentData công khai (từ DocumentAccessPage)
+    const [currentPage, setCurrentPage] = React.useState(1);
     
-    const nextPage = () => setCurrentPage(p => Math.min(p + 1, documentData.totalPages));
-    const prevPage = () => setCurrentPage(p => Math.max(p - 1, 1));
-    
+    const onPageChange = (page) => {
+        setCurrentPage(page);
+    };
+
+    const isPaid = documentData.sharedBy === 'Hệ thống thanh toán';
+    const isExpired = new Date(documentData.expiresAt).getTime() < Date.now();
+
     if (isExpired) {
-        return <div className="text-center text-red-600 font-bold text-2xl">Link đã hết hạn!</div>;
+        return (
+            <Result
+                status="warning"
+                title="Link truy cập đã hết hạn"
+                subTitle="Vui lòng liên hệ người chia sẻ để có link mới."
+            />
+        );
     }
 
     return (
-        <div className="flex flex-col h-full animate-fade-in">
-            {/* Header */}
-            <header className="flex flex-wrap justify-between items-center p-4 border-b">
-                <h1 className="text-2xl font-bold text-gray-800">{documentData.name}</h1>
-                <div className="flex items-center gap-4 text-sm text-gray-600">
-                    <div className="flex items-center"><UserCircleIcon className="h-5 w-5 mr-1 text-gray-400"/> <span>Chia sẻ bởi: <strong>{documentData.sharedBy}</strong></span></div>
-                    <div className="flex items-center text-red-600 font-semibold"><ClockIcon className="h-5 w-5 mr-1"/> <span>Hết hạn sau: {days}d {hours}h {minutes}m {seconds}s</span></div>
-                </div>
-            </header>
+        <Layout style={{ height: '100%', backgroundColor: '#fff' }}>
+            <Header style={{ backgroundColor: '#fff', borderBottom: '1px solid #f0f0f0', padding: '0 24px', height: 'auto' }}>
+                <Space direction="vertical" style={{width: '100%', padding: '12px 0'}}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                        <Title level={4} style={{ margin: 0 }}>{documentData.name}</Title>
+                        <Space>
+                            <Tag icon={<UserOutlined />} color="blue">
+                                Chia sẻ bởi: {documentData.sharedBy}
+                            </Tag>
+                            <Countdown 
+                                title="Hết hạn sau" 
+                                value={documentData.expiresAt} 
+                                format="HH:mm:ss" 
+                                valueStyle={{ fontSize: '16px', color: '#cf1322' }}
+                            />
+                        </Space>
+                    </div>
+                </Space>
+            </Header>
 
-            {/* Viewer Area */}
-            <main className="flex-grow flex items-center justify-center bg-gray-200 relative p-4 overflow-hidden">
+            <Content style={{ backgroundColor: '#f0f2f5', padding: '24px', position: 'relative', overflow: 'hidden' }}>
                 {/* Watermark */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                    <p className="text-7xl md:text-9xl font-black text-black opacity-10 transform -rotate-45 select-none">{documentData.watermark}</p>
+                <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    pointerEvents: 'none',
+                    zIndex: 10,
+                    overflow: 'hidden'
+                }}>
+                    <Text
+                        style={{
+                            fontSize: 'calc(5vw + 2rem)', // Responsive font size
+                            fontWeight: 'bold',
+                            color: 'rgba(0, 0, 0, 0.08)',
+                            transform: 'rotate(-45deg)',
+                            whiteSpace: 'nowrap',
+                            userSelect: 'none'
+                        }}
+                    >
+                        {documentData.watermark}
+                    </Text>
                 </div>
                 
                 {/* Document Content */}
-                <div className="bg-white w-full max-w-4xl h-[60vh] shadow-lg p-8 text-gray-700 relative overflow-auto">
-                    <p>{documentData.pagesContent[currentPage - 1]}</p>
+                <div style={{ 
+                    maxWidth: 800, 
+                    margin: '0 auto', 
+                    backgroundColor: '#fff', 
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    minHeight: '60vh',
+                    padding: '24px 32px'
+                }}>
+                    <Paragraph>
+                        <Text strong>Nội dung trang {currentPage} / {documentData.totalPages}</Text>
+                        <br />
+                        {documentData.pagesContent[currentPage - 1]}
+                    </Paragraph>
                 </div>
-            </main>
+            </Content>
 
-            {/* Footer / Controls */}
-            <footer className="flex justify-between items-center p-4 border-t">
-                <div className="flex gap-2">
-                    <button disabled className="px-4 py-2 bg-gray-300 text-gray-500 rounded-lg flex items-center cursor-not-allowed" title="Tính năng bị vô hiệu hóa">
-                        <LockClosedIcon className="h-5 w-5 mr-2"/> Tải xuống
-                    </button>
-                     <button disabled className="px-4 py-2 bg-gray-300 text-gray-500 rounded-lg flex items-center cursor-not-allowed" title="Tính năng bị vô hiệu hóa">
-                        In
-                    </button>
-                </div>
-                <div className="flex items-center gap-4">
-                    <button onClick={prevPage} disabled={currentPage === 1} className="p-2 rounded-full hover:bg-gray-200 disabled:opacity-50"><ArrowLeftIcon className="h-6 w-6"/></button>
-                    <span>Trang <strong>{currentPage}</strong> / {documentData.totalPages}</span>
-                    <button onClick={nextPage} disabled={currentPage === documentData.totalPages} className="p-2 rounded-full hover:bg-gray-200 disabled:opacity-50"><ArrowRightIcon className="h-6 w-6"/></button>
-                </div>
-            </footer>
-        </div>
+            <Footer style={{ backgroundColor: '#fff', borderTop: '1px solid #f0f0f0', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Space>
+                    <Tooltip title={isPaid ? "Bạn đã mua tài liệu này" : "Tài liệu công khai, không thể tải xuống"}>
+                        <Button icon={<DownloadOutlined />} disabled={!isPaid}>
+                            Tải xuống
+                        </Button>
+                    </Tooltip>
+                    <Tooltip title="Tính năng in bị vô hiệu hóa">
+                        <Button icon={<LockOutlined />} disabled>
+                            In
+                        </Button>
+                    </Tooltip>
+                </Space>
+                <Pagination
+                    current={currentPage}
+                    total={documentData.totalPages}
+                    pageSize={1}
+                    onChange={onPageChange}
+                    size="small"
+                />
+            </Footer>
+        </Layout>
     );
 };
 

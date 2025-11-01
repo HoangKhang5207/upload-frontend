@@ -1,21 +1,22 @@
 import React from 'react';
+import { Form, Input } from 'antd';
 
-const InputField = ({ label, id, value, onChange, type = 'text', required = false, helpText }) => (
-  <div>
-    <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">
-      {label} {required && <span className="text-red-500">*</span>}
-    </label>
-    <input
-      type={type}
+const InputField = ({ label, id, value, onChange, type = 'text', required = false, helpText, name }) => (
+  <Form.Item
+    label={label}
+    htmlFor={id}
+    required={required}
+    tooltip={helpText}
+  >
+    <Input
       id={id}
-      name={id}
+      name={name || id} // Đảm bảo 'name' tồn tại
       value={value}
       onChange={onChange}
+      type={type}
       required={required}
-      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
     />
-    {helpText && <p className="mt-1 text-xs text-gray-500">{helpText}</p>}
-  </div>
+  </Form.Item>
 );
 
 export default InputField;

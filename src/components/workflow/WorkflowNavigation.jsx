@@ -1,70 +1,69 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { Menu, Card } from 'antd'; // Import Menu và Card
 import { 
-  DocumentTextIcon, 
-  PencilIcon, 
-  PlayIcon,
-  ListBulletIcon,
-  BookOpenIcon
-} from '@heroicons/react/24/outline';
+  DashboardOutlined, // Thay thế DocumentTextIcon
+  EditOutlined, // Thay thế PencilIcon
+  PlayCircleOutlined, // Thay thế PlayIcon
+  UnorderedListOutlined, // Thay thế ListBulletIcon
+  BookOutlined // Thay thế BookOpenIcon
+} from '@ant-design/icons';
 
 const navigationItems = [
   {
-    name: 'Bảng điều khiển',
-    href: '/workflow-dashboard',
-    icon: DocumentTextIcon,
+    key: '/workflow-dashboard',
+    label: <Link to="/workflow-dashboard">Bảng điều khiển</Link>,
+    icon: <DashboardOutlined />,
   },
   {
-    name: 'Danh sách Workflow',
-    href: '/workflow-list',
-    icon: ListBulletIcon,
+    key: '/workflow-list',
+    label: <Link to="/workflow-list">Danh sách Workflow</Link>,
+    icon: <UnorderedListOutlined />,
   },
   {
-    name: 'Thiết kế Workflow',
-    href: '/bpmn-modeler',
-    icon: PencilIcon,
+    key: '/bpmn-modeler',
+    label: <Link to="/bpmn-modeler">Thiết kế Workflow</Link>,
+    icon: <EditOutlined />,
   },
   {
-    name: 'Khởi tạo quy trình',
-    href: '/start-workflow/1',
-    icon: PlayIcon,
+    key: '/start-workflow/1', // Key gốc
+    label: <Link to="/start-workflow/1">Khởi tạo quy trình</Link>,
+    icon: <PlayCircleOutlined />,
   },
   {
-    name: 'Tài liệu hướng dẫn',
-    href: '/workflow-documentation',
-    icon: BookOpenIcon,
+    key: '/workflow-documentation',
+    label: <Link to="/workflow-documentation">Tài liệu hướng dẫn</Link>,
+    icon: <BookOutlined />,
   },
 ];
 
 const WorkflowNavigation = () => {
   const location = useLocation();
+  const [current, setCurrent] = useState(location.pathname);
+
+  useEffect(() => {
+    // Logic tìm key active (giống như MainLayout)
+    if (location.pathname.startsWith('/start-workflow')) {
+      setCurrent('/start-workflow/1');
+    } else if (location.pathname.startsWith('/bpmn-modeler')) {
+      setCurrent('/bpmn-modeler');
+    } else if (location.pathname.startsWith('/workflow-detail') || location.pathname === '/workflow-list') {
+      setCurrent('/workflow-list');
+    } else {
+      setCurrent(location.pathname);
+    }
+  }, [location.pathname]);
 
   return (
-    <div className="bg-white shadow rounded-lg mb-6">
-      <div className="px-4 py-5 sm:px-6">
-        <nav className="flex space-x-8 overflow-x-auto">
-          {navigationItems.map((item) => {
-            const isActive = location.pathname === item.href || 
-                            (item.href === '/start-workflow/1' && location.pathname.startsWith('/start-workflow'));
-            
-            return (
-              <Link
-                key={item.name}
-                to={item.href}
-                className={`flex items-center whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
-                  isActive
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <item.icon className="flex-shrink-0 mr-2 h-5 w-5" />
-                {item.name}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-    </div>
+    <Card style={{ marginBottom: 24 }} bodyStyle={{ padding: 0 }}>
+      <Menu
+        onClick={(e) => setCurrent(e.key)}
+        selectedKeys={[current]}
+        mode="horizontal"
+        items={navigationItems}
+        style={{ borderBottom: 'none' }} // Bỏ viền dưới của Menu khi nằm trong Card
+      />
+    </Card>
   );
 };
 

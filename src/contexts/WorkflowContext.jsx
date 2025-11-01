@@ -6,7 +6,7 @@ const initialState = {
   selectedWorkflow: null,
   loading: false,
   error: null,
-  notifications: []
+  // notifications: []
 };
 
 // Action types
@@ -16,8 +16,8 @@ export const actionTypes = {
   SET_LOADING: 'SET_LOADING',
   SET_ERROR: 'SET_ERROR',
   CLEAR_ERROR: 'CLEAR_ERROR',
-  ADD_NOTIFICATION: 'ADD_NOTIFICATION',
-  REMOVE_NOTIFICATION: 'REMOVE_NOTIFICATION'
+  // ADD_NOTIFICATION: 'ADD_NOTIFICATION',
+  // REMOVE_NOTIFICATION: 'REMOVE_NOTIFICATION'
 };
 
 // Reducer
@@ -53,16 +53,16 @@ const workflowReducer = (state, action) => {
         ...state,
         error: null,
       };
-    case actionTypes.ADD_NOTIFICATION:
-      return {
-        ...state,
-        notifications: [...state.notifications, action.payload]
-      };
-    case actionTypes.REMOVE_NOTIFICATION:
-      return {
-        ...state,
-        notifications: state.notifications.filter(notification => notification.id !== action.payload)
-      };
+    // case actionTypes.ADD_NOTIFICATION:
+    //   return {
+    //     ...state,
+    //     notifications: [...state.notifications, action.payload]
+    //   };
+    // case actionTypes.REMOVE_NOTIFICATION:
+    //   return {
+    //     ...state,
+    //     notifications: state.notifications.filter(notification => notification.id !== action.payload)
+    //   };
     default:
       return state;
   }

@@ -1,26 +1,48 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { 
-  ArrowLeftIcon,
-  PaperAirplaneIcon,
-  DocumentTextIcon,
-  ArrowUpIcon,
-  ArrowDownIcon
-} from '@heroicons/react/24/outline';
+  ArrowLeftOutlined,
+  SendOutlined,
+  FileTextOutlined,
+  ArrowUpOutlined,
+  ArrowDownOutlined,
+  PaperClipOutlined,
+  LoadingOutlined
+} from '@ant-design/icons';
+import {
+  Button,
+  Form,
+  Input,
+  Select,
+  Radio,
+  Upload,
+  message, // Sẽ dùng message của Antd
+  App, // Import App để dùng notification
+  Spin,
+  Typography,
+  Tag,
+  List
+} from 'antd';
 import * as mockWorkflowApi from '../../api/mockWorkflowApi';
 import WorkflowNavigation from '../../components/workflow/WorkflowNavigation';
 import { useWorkflow } from '../../contexts/WorkflowContext';
 import WorkflowLoading from '../../components/workflow/WorkflowLoading';
 
+const { Option } = Select;
+const { Dragger } = Upload;
+const { Title, Text } = Typography;
+
 const StartWorkflowPage = () => {
   const { type } = useParams();
+  const navigate = useNavigate();
+  const [form] = Form.useForm(); // Sử dụng Form hook của Antd
   const { state, dispatch } = useWorkflow();
   const { workflows } = state;
-  const [documentTitle, setDocumentTitle] = useState('');
-  const [documentDescription, setDocumentDescription] = useState('');
-  const [selectedWorkflow, setSelectedWorkflow] = useState('');
-  const [priority, setPriority] = useState('normal');
   const [attachments, setAttachments] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Lấy API notification từ Antd App Context
+  const { notification } = App.useApp();
 
   useEffect(() => {
     const fetchWorkflows = async () => {
@@ -44,62 +66,70 @@ const StartWorkflowPage = () => {
     workflows.filter(workflow => workflow.documentType === type) : 
     workflows;
 
-  const documentTypeLabel = type === '1' ? 'Văn bản đi' : type === '2' ? 'Văn bản đến' : 'Tất cả loại văn bản';
-  const documentTypeIcon = type === '1' ? ArrowUpIcon : type === '2' ? ArrowDownIcon : DocumentTextIcon;
+  let documentTypeLabel = 'Tất cả loại văn bản';
+  let documentTypeIcon = <FileTextOutlined />;
+  if (type === '1') {
+    documentTypeLabel = 'Văn bản đi';
+    documentTypeIcon = <ArrowUpOutlined />;
+  } else if (type === '2') {
+    documentTypeLabel = 'Văn bản đến';
+    documentTypeIcon = <ArrowDownOutlined />;
+  }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const onFinish = async (values) => {
+    setIsSubmitting(true);
     dispatch({ type: 'SET_LOADING', payload: true });
     
+    console.log('Form values:', values);
+    console.log('Attachments:', attachments);
+
     try {
       // Simulate starting workflow
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Add success notification
-      dispatch({
-        type: 'ADD_NOTIFICATION',
-        payload: {
-          id: Date.now(),
-          type: 'success',
-          title: 'Thành công',
-          message: 'Quy trình đã được khởi tạo thành công',
-          autoDismiss: true,
-          dismissTime: 3000
-        }
+      // THAY THẾ DISPATCH BẰNG NOTIFICATION CỦA ANTD
+      notification.success({
+        message: 'Thành công',
+        description: 'Quy trình đã được khởi tạo thành công',
+        placement: 'topRight',
       });
+      
+      // Reset form
+      form.resetFields();
+      setAttachments([]);
+
     } catch (error) {
       console.error('Error starting workflow:', error);
       dispatch({ type: 'SET_ERROR', payload: 'Có lỗi xảy ra khi khởi tạo quy trình' });
       
-      // Add error notification
-      dispatch({
-        type: 'ADD_NOTIFICATION',
-        payload: {
-          id: Date.now(),
-          type: 'error',
-          title: 'Lỗi',
-          message: 'Có lỗi xảy ra khi khởi tạo quy trình',
-          autoDismiss: true,
-          dismissTime: 5000
-        }
+      // THAY THẾ DISPATCH BẰNG NOTIFICATION CỦA ANTD
+      notification.error({
+        message: 'Lỗi',
+        description: 'Có lỗi xảy ra khi khởi tạo quy trình',
+        placement: 'topRight',
       });
     } finally {
+      setIsSubmitting(false);
       dispatch({ type: 'SET_LOADING', payload: false });
     }
   };
 
-  const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
-    setAttachments(prev => [...prev, ...files]);
+  const uploadProps = {
+    multiple: true,
+    onRemove: (file) => {
+      const newAttachments = attachments.filter((f) => f.uid !== file.uid);
+      setAttachments(newAttachments);
+    },
+    beforeUpload: (file) => {
+      setAttachments([...attachments, file]);
+      return false; // Ngăn Antd tự động upload
+    },
+    fileList: attachments,
   };
 
-  const removeAttachment = (index) => {
-    setAttachments(prev => prev.filter((_, i) => i !== index));
-  };
-
-  if (state.loading) {
+  if (state.loading && !isSubmitting) {
     return (
-      <div className="max-w-4xl mx-auto">
+      <div style={{ maxWidth: 900, margin: '0 auto' }}>
         <WorkflowNavigation />
         <WorkflowLoading message="Đang tải thông tin khởi tạo quy trình..." />
       </div>
@@ -107,233 +137,106 @@ const StartWorkflowPage = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div style={{ maxWidth: 900, margin: '0 auto' }}>
       <WorkflowNavigation />
       
-      <div className="flex items-center mb-6">
-        <Link to="/workflow-management" className="mr-4 p-2 rounded-full hover:bg-gray-100">
-          <ArrowLeftIcon className="h-6 w-6 text-gray-600" />
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>
+        <Link to="/workflow-management" style={{ marginRight: '16px', padding: '8px', borderRadius: '50%', transition: 'background 0.3s' }} className="hover:bg-gray-100">
+          <ArrowLeftOutlined style={{ fontSize: '20px', color: '#555' }} />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Khởi tạo quy trình</h1>
-          <p className="text-gray-600">Khởi tạo quy trình xử lý {documentTypeLabel.toLowerCase()}</p>
+          <Title level={3} style={{ margin: 0 }}>Khởi tạo quy trình</Title>
+          <Text type="secondary">Khởi tạo quy trình xử lý {documentTypeLabel.toLowerCase()}</Text>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Loại văn bản
-            </label>
-            <div className="mt-1 relative rounded-md shadow-sm">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                {React.createElement(documentTypeIcon, { className: "h-5 w-5 text-gray-400" })}
-              </div>
-              <input
-                type="text"
-                value={documentTypeLabel}
-                disabled
-                className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-md bg-gray-50 text-gray-500"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="documentTitle" className="block text-sm font-medium text-gray-700 mb-1">
-              Tiêu đề văn bản
-            </label>
-            <input
-              type="text"
-              id="documentTitle"
-              value={documentTitle}
-              onChange={(e) => setDocumentTitle(e.target.value)}
-              required
-              className="block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Nhập tiêu đề văn bản"
+      <Spin spinning={isSubmitting} tip="Đang khởi tạo...">
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={onFinish}
+          style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', padding: '24px' }}
+        >
+          <Form.Item label="Loại văn bản">
+            <Input
+              prefix={documentTypeIcon}
+              value={documentTypeLabel}
+              disabled
+              size="large"
             />
-          </div>
+          </Form.Item>
 
-          <div>
-            <label htmlFor="documentDescription" className="block text-sm font-medium text-gray-700 mb-1">
-              Mô tả
-            </label>
-            <textarea
-              id="documentDescription"
-              rows={4}
-              value={documentDescription}
-              onChange={(e) => setDocumentDescription(e.target.value)}
-              className="block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Mô tả ngắn về nội dung văn bản"
-            />
-          </div>
+          <Form.Item
+            name="documentTitle"
+            label="Tiêu đề văn bản"
+            rules={[{ required: true, message: 'Vui lòng nhập tiêu đề!' }]}
+          >
+            <Input size="large" placeholder="Nhập tiêu đề văn bản" />
+          </Form.Item>
 
-          <div>
-            <label htmlFor="workflow" className="block text-sm font-medium text-gray-700 mb-1">
-              Chọn quy trình
-            </label>
-            <select
-              id="workflow"
-              value={selectedWorkflow}
-              onChange={(e) => setSelectedWorkflow(e.target.value)}
-              required
-              className="block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Chọn một quy trình</option>
+          <Form.Item
+            name="documentDescription"
+            label="Mô tả"
+          >
+            <Input.TextArea rows={4} placeholder="Mô tả ngắn về nội dung văn bản" />
+          </Form.Item>
+
+          <Form.Item
+            name="workflow"
+            label="Chọn quy trình"
+            rules={[{ required: true, message: 'Vui lòng chọn quy trình!' }]}
+          >
+            <Select size="large" placeholder="Chọn một quy trình">
               {filteredWorkflows.map(workflow => (
-                <option key={workflow.id} value={workflow.id}>
-                  {workflow.name}
-                </option>
+                <Option key={workflow.id} value={workflow.id}>
+                  {workflow.name} {workflow.isDeployed && <Tag color="red" style={{marginLeft: 8}}>Đang sử dụng</Tag>}
+                </Option>
               ))}
-            </select>
-          </div>
+            </Select>
+          </Form.Item>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Mức độ ưu tiên
-            </label>
-            <div className="grid grid-cols-3 gap-3">
-              <label className="relative border rounded-md p-4 flex cursor-pointer focus:outline-none">
-                <input
-                  type="radio"
-                  name="priority"
-                  value="low"
-                  checked={priority === 'low'}
-                  onChange={() => setPriority('low')}
-                  className="sr-only"
-                />
-                <div className="flex-1 flex">
-                  <div className="flex flex-col">
-                    <span className="block text-sm font-medium text-gray-900">Thấp</span>
-                  </div>
-                </div>
-                {priority === 'low' && (
-                  <div className="absolute -inset-px rounded-md border-2 border-blue-500 pointer-events-none" aria-hidden="true"></div>
-                )}
-              </label>
-              <label className="relative border rounded-md p-4 flex cursor-pointer focus:outline-none">
-                <input
-                  type="radio"
-                  name="priority"
-                  value="normal"
-                  checked={priority === 'normal'}
-                  onChange={() => setPriority('normal')}
-                  className="sr-only"
-                />
-                <div className="flex-1 flex">
-                  <div className="flex flex-col">
-                    <span className="block text-sm font-medium text-gray-900">Bình thường</span>
-                  </div>
-                </div>
-                {priority === 'normal' && (
-                  <div className="absolute -inset-px rounded-md border-2 border-blue-500 pointer-events-none" aria-hidden="true"></div>
-                )}
-              </label>
-              <label className="relative border rounded-md p-4 flex cursor-pointer focus:outline-none">
-                <input
-                  type="radio"
-                  name="priority"
-                  value="high"
-                  checked={priority === 'high'}
-                  onChange={() => setPriority('high')}
-                  className="sr-only"
-                />
-                <div className="flex-1 flex">
-                  <div className="flex flex-col">
-                    <span className="block text-sm font-medium text-gray-900">Cao</span>
-                  </div>
-                </div>
-                {priority === 'high' && (
-                  <div className="absolute -inset-px rounded-md border-2 border-blue-500 pointer-events-none" aria-hidden="true"></div>
-                )}
-              </label>
-            </div>
-          </div>
+          <Form.Item
+            name="priority"
+            label="Mức độ ưu tiên"
+            initialValue="normal"
+          >
+            <Radio.Group>
+              <Radio.Button value="low">Thấp</Radio.Button>
+              <Radio.Button value="normal">Bình thường</Radio.Button>
+              <Radio.Button value="high">Cao</Radio.Button>
+            </Radio.Group>
+          </Form.Item>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tệp đính kèm
-            </label>
-            <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-              <div className="space-y-1 text-center">
-                <svg
-                  className="mx-auto h-12 w-12 text-gray-400"
-                  stroke="currentColor"
-                  fill="none"
-                  viewBox="0 0 48 48"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <div className="flex text-sm text-gray-600">
-                  <label
-                    htmlFor="file-upload"
-                    className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
-                  >
-                    <span>Upload một file</span>
-                    <input
-                      id="file-upload"
-                      name="file-upload"
-                      type="file"
-                      className="sr-only"
-                      onChange={handleFileChange}
-                      multiple
-                    />
-                  </label>
-                  <p className="pl-1">hoặc kéo và thả</p>
-                </div>
-                <p className="text-xs text-gray-500">PDF, DOC, JPG, PNG lên đến 10MB</p>
-              </div>
-            </div>
-            
-            {attachments.length > 0 && (
-              <div className="mt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Tệp đã chọn:</h4>
-                <ul className="border border-gray-200 rounded-md divide-y divide-gray-200">
-                  {attachments.map((file, index) => (
-                    <li key={index} className="pl-3 pr-4 py-3 flex items-center justify-between text-sm">
-                      <div className="w-0 flex-1 flex items-center">
-                        <DocumentTextIcon className="flex-shrink-0 h-5 w-5 text-gray-400" />
-                        <span className="ml-2 flex-1 w-0 truncate">{file.name}</span>
-                      </div>
-                      <div className="ml-4 flex-shrink-0">
-                        <button
-                          onClick={() => removeAttachment(index)}
-                          className="font-medium text-red-600 hover:text-red-500"
-                        >
-                          Xóa
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
+          <Form.Item
+            label="Tệp đính kèm"
+          >
+            <Dragger {...uploadProps}>
+              <p className="ant-upload-drag-icon">
+                <PaperClipOutlined />
+              </p>
+              <p className="ant-upload-text">Click hoặc kéo file vào đây để đính kèm</p>
+              <p className="ant-upload-hint">
+                Hỗ trợ PDF, DOC, JPG... Tối đa 10MB.
+              </p>
+            </Dragger>
+          </Form.Item>
 
-          <div className="flex justify-end">
-            <button
-              type="button"
-              className="mr-3 inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
+          <Form.Item style={{ textAlign: 'right', marginTop: '32px', marginBottom: 0 }}>
+            <Button onClick={() => navigate('/workflow-list')} style={{ marginRight: 12 }}>
               Hủy
-            </button>
-            <button
-              type="submit"
-              disabled={state.loading}
-              className="inline-flex items-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            </Button>
+            <Button
+              type="primary"
+              htmlType="submit"
+              size="large"
+              icon={isSubmitting ? <LoadingOutlined /> : <SendOutlined />}
+              disabled={isSubmitting}
             >
-              <PaperAirplaneIcon className="h-5 w-5 mr-2" />
               Khởi tạo quy trình
-            </button>
-          </div>
-        </form>
-      </div>
+            </Button>
+          </Form.Item>
+        </Form>
+      </Spin>
     </div>
   );
 };
