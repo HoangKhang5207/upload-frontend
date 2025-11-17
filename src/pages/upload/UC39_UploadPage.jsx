@@ -21,8 +21,10 @@ import WorkflowVisualizer from '../../components/dms/upload/WorkflowVisualizer';
 import ProcessingResultDetails from '../../components/dms/upload/ProcessingResultDetails';
 
 // --- Mock API Imports ---
-import * as uploadApi from '../../api/mockUploadApi';
 import { mockGetCategories } from '../../api/mockDmsApi';
+// Thêm import API thực tế
+import * as uploadApi from '../../api/uploadApi';
+import * as mockUploadApi from '../../api/mockUploadApi';
 
 const { Title, Paragraph, Text } = Typography;
 const { Dragger } = Upload; // <-- Dùng Dragger của Antd
@@ -55,10 +57,9 @@ const UC39_UploadPage = () => {
         const initialize = async () => {
             if (state.categories.length === 0) {
                 const user = { department: "PHONG_HANH_CHINH", position: "TRUONG_PHONG" };
-                const [categoriesData, permissionsData] = await Promise.all([
-                    mockGetCategories(),
-                    uploadApi.mockCheckPermissions(user)
-                ]);
+                // Sử dụng API thực tế thay vì mock
+                const categoriesData = await mockGetCategories();
+                const permissionsData = await mockUploadApi.mockCheckPermissions(user);
                 dispatch({ type: actionTypes.SET_INITIAL_DATA, payload: { categories: categoriesData, permissions: permissionsData } });
             }
         };
@@ -80,7 +81,6 @@ const UC39_UploadPage = () => {
 
     // --- Logic xử lý file (Thay thế toast bằng message/notification) ---
     const processFile = useCallback(async (selectedFile) => {
-        // ... (Giữ nguyên toàn bộ logic của hàm processFile)
         const loadingKey = 'processing';
         message.loading({ content: 'Đang xử lý file...', key: loadingKey, duration: 0 });
 
@@ -99,59 +99,59 @@ const UC39_UploadPage = () => {
         };
 
         try {
-            updateStepStatus(0, 'processing');
-            const denoiseResult = await uploadApi.mockDenoiseImage(selectedFile);
-            updateStepStatus(0, 'completed');
-
-            updateStepStatus(1, 'processing');
-            const ocrResult = await uploadApi.mockOcrProcessing(selectedFile);
-            if (!ocrResult.success) throw new Error("OCR processing failed");
-            updateStepStatus(1, 'completed');
-
-            updateStepStatus(2, 'processing');
-            const duplicateResult = await uploadApi.mockDuplicateCheck(selectedFile, duplicateCheckEnabled);
-            if (!duplicateResult.success) {
+            // Gọi API thực tế để xử lý file
+            const result = await uploadApi.processUpload(selectedFile, duplicateCheckEnabled);
+            
+            if (result.status === "409") {
+                // Phát hiện trùng lặp
+                updateStepStatus(0, 'completed');
+                updateStepStatus(1, 'completed');
                 updateStepStatus(2, 'error');
                 message.destroy(loadingKey);
                 notification.error({
                     message: 'Phát hiện trùng lặp!',
-                    description: duplicateResult.error,
+                    description: result.message,
                     duration: 6,
                     placement: 'topRight'
                 });
-                dispatch({ type: actionTypes.SET_API_RESPONSE, payload: { ...state.apiResponse, duplicateError: duplicateResult } });
+                dispatch({ type: actionTypes.SET_API_RESPONSE, payload: { ...state.apiResponse, duplicateError: result } });
                 return;
             }
-            updateStepStatus(2, 'completed');
-
-            updateStepStatus(3, 'processing');
-            const metadataResult = await uploadApi.mockMetadataSuggestion(ocrResult.ocrContent);
-            dispatch({ type: actionTypes.SET_METADATA, payload: metadataResult.suggestedMetadata });
-            updateStepStatus(3, 'completed');
-
-            updateStepStatus(4, 'processing');
-            const conflictResult = uploadApi.mockDataConflictCheck(metadataResult.suggestedMetadata.key_values);
-            updateStepStatus(4, 'completed');
-
-            updateStepStatus(5, 'processing');
-            const watermarkResult = await uploadApi.mockEmbedWatermark(selectedFile);
-            updateStepStatus(5, 'completed');
             
-            const fullApiResponse = {
-                ocrContent: ocrResult.ocrContent,
-                suggestedMetadata: metadataResult.suggestedMetadata,
-                warnings: metadataResult.warnings,
-                conflicts: conflictResult.conflicts,
-                denoiseInfo: denoiseResult,
-                watermarkInfo: watermarkResult,
-            };
+            if (result.status === "200") {
+                // Xử lý thành công, cập nhật tất cả các bước
+                for (let i = 0; i < steps.length; i++) {
+                    updateStepStatus(i, 'completed');
+                }
+                
+                // Tạo đối tượng phản hồi tương tự như mock
+                const fullApiResponse = {
+                    ocrContent: result.data.ocrContent,
+                    total_pages: result.data.total_pages,
+                    suggestedMetadata: result.data.suggestedMetadata,
+                    warnings: result.data.warnings || [],
+                    conflicts: result.data.conflicts || [],
+                    denoiseInfo: result.data.denoiseInfo || { denoised: false, message: "Không phải file ảnh, bỏ qua khử nhiễu." },
+                    watermarkInfo: result.data.watermarkInfo || { success: true, message: "Sẵn sàng nhúng watermark 'Confidential - INNOTECH' (nếu cần)." }
+                };
 
-            dispatch({ type: actionTypes.SET_API_RESPONSE, payload: fullApiResponse });
-            
-            message.success({ content: 'Xử lý file thành công. Vui lòng xem lại thông tin.', key: loadingKey, duration: 4 });
-            dispatch({ type: actionTypes.SET_STEP, payload: 3 });
+                dispatch({ type: actionTypes.SET_API_RESPONSE, payload: fullApiResponse });
+                
+                // Cập nhật metadata trong state
+                dispatch({ type: actionTypes.SET_METADATA, payload: result.data.suggestedMetadata });
+                
+                message.success({ content: 'Xử lý file thành công. Vui lòng xem lại thông tin.', key: loadingKey, duration: 4 });
+                dispatch({ type: actionTypes.SET_STEP, payload: 3 });
+            } else {
+                throw new Error(result.message || "Có lỗi xảy ra trong quá trình xử lý file");
+            }
 
         } catch (error) {
+            // Xử lý lỗi
+            for (let i = 0; i < steps.length; i++) {
+                updateStepStatus(i, 'error');
+            }
+            
             message.error({ content: `Có lỗi xảy ra: ${error.message}`, key: loadingKey, duration: 5 });
             notification.error({
                 message: 'Lỗi xử lý file',
@@ -213,10 +213,20 @@ const UC39_UploadPage = () => {
             const finalMetadata = {
                 ...metadata,
                 ...values,
-                tags: values.tags ? values.tags.split(',').map(tag => tag.trim()) : []
+                tags: values.tags ? values.tags.split(',').map(tag => tag.trim()) : [],
+                // Thêm các trường dữ liệu từ bước xử lý trước
+                ocrContent: apiResponse?.ocrContent || '',
+                total_pages: apiResponse?.total_pages || 1,
+                key_values: apiResponse?.suggestedMetadata?.key_values || {},
+                summary: apiResponse?.suggestedMetadata?.summary || '',
+                // Sử dụng giá trị mặc định cho các trường bắt buộc
+                category: values.category || metadata.category || 1,
+                accessType: values.accessType || metadata.accessType || 'public',
+                confidentiality: values.confidentiality || metadata.confidentiality || 'PUBLIC'
             };
 
-            const result = await uploadApi.mockFinalizeUpload(file, finalMetadata);
+            // Sử dụng API thực tế thay vì mock
+            const result = await uploadApi.finalizeUpload(file, finalMetadata);
             dispatch({ type: actionTypes.SET_UPLOAD_RESULT, payload: result });
             message.success({ content: 'Hoàn tất thành công!', key: loadingKey });
         
@@ -254,7 +264,6 @@ const UC39_UploadPage = () => {
                 ) : (
                     // --- SỬA LỖI Ở ĐÂY ---
                     <Dragger 
-                        // {...getRootProps()} // <-- XÓA DÒNG NÀY
                         beforeUpload={handleBeforeUpload} // <-- THÊM PROP NÀY
                         multiple={false} // <-- THÊM PROP NÀY
                         showUploadList={false} // <-- THÊM PROP NÀY
@@ -423,7 +432,7 @@ const UC39_UploadPage = () => {
                         )}
                     </Descriptions>
 
-                    {uploadResult.autoRouteInfo?.triggered && (
+                    {uploadResult.autoRouteInfo?.triggered ? (
                         <Card 
                             title="Tài liệu đã được tự động định tuyến (UC-84)" 
                             size="small" 
@@ -434,6 +443,15 @@ const UC39_UploadPage = () => {
                             {uploadResult.autoRouteInfo.workflow && (
                                 <WorkflowVisualizer workflow={uploadResult.autoRouteInfo.workflow} />
                             )}
+                        </Card>
+                    ) : (
+                        <Card 
+                            title="Thông tin quy trình" 
+                            size="small" 
+                            style={{marginTop: 24}}
+                            headStyle={{backgroundColor: '#fffbe6', borderBottom: '1px solid #ffe58f'}}
+                        >
+                            <Paragraph>Không có thông tin quy trình.</Paragraph>
                         </Card>
                     )}
                 </div>

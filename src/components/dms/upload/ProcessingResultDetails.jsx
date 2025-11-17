@@ -102,7 +102,7 @@ const ProcessingResultDetails = ({ apiResponse }) => {
                 <Card title="6. Nhúng Watermark bảo vệ" size="small" headStyle={{backgroundColor: '#fafafa'}}>
                      <Alert
                         message={watermarkInfo.message}
-                        description={<Text>File đã nhúng: <Text code>{watermarkInfo.watermarkedFile.name}</Text></Text>}
+                        description={<Text>File đã nhúng: <Text code>{watermarkInfo.watermarkedFile?.name || "Không có thông tin file"}</Text></Text>}
                         type="success"
                         showIcon
                         icon={<SafetyCertificateOutlined />}
