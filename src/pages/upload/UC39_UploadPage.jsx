@@ -55,12 +55,28 @@ const UC39_UploadPage = () => {
     // --- Effects ---
     useEffect(() => {
         const initialize = async () => {
-            if (state.categories.length === 0) {
-                const user = { department: "PHONG_HANH_CHINH", position: "TRUONG_PHONG" };
-                // Sử dụng API thực tế thay vì mock
-                const categoriesData = await mockGetCategories();
-                const permissionsData = await mockUploadApi.mockCheckPermissions(user);
-                dispatch({ type: actionTypes.SET_INITIAL_DATA, payload: { categories: categoriesData, permissions: permissionsData } });
+            // Chỉ load nếu chưa có category
+            if (categories.length === 0) {
+                try {
+                    // 1. Gọi API thật để lấy danh mục từ DB (đã seed)
+                    const realCategories = await uploadApi.getCategories();
+                    
+                    // Map data cho đúng format của SelectField (id, name)
+                    const formattedCategories = realCategories.map(cat => ({
+                        id: cat.id,
+                        name: cat.name
+                    }));
+
+                    // 2. Quyền upload (Giả định user hiện tại luôn có quyền, hoặc gọi API check)
+                    const permissionsData = { canUpload: true, maxFileSize: 50 }; 
+
+                    dispatch({ 
+                        type: actionTypes.SET_INITIAL_DATA, 
+                        payload: { categories: formattedCategories, permissions: permissionsData } 
+                    });
+                } catch (error) {
+                    message.error("Không thể tải danh mục từ Server: " + error.message);
+                }
             }
         };
         initialize();
@@ -70,7 +86,7 @@ const UC39_UploadPage = () => {
         else if (/tablet/i.test(userAgent)) setDeviceType('tablet');
         else setDeviceType('desktop');
 
-    }, [dispatch, state.categories.length]);
+    }, [dispatch, categories.length, message]);
     
     useEffect(() => {
         form.setFieldsValue({
