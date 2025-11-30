@@ -34,8 +34,8 @@ const AutoRouteVisualization = ({ routeInfo, docInfo }) => {
                         children: (
                         <>
                             <Text strong>1. Phân tích Metadata</Text><br/>
-                            <Text type="secondary">Category: {docInfo.category_name || '...'}</Text><br/>
-                            <Text type="secondary">Tags: {docInfo.tags_json || 'None'}</Text>
+                            <Text type="secondary">Danh mục - Category: {docInfo.category_name || '...'}</Text><br/>
+                            <Text type="secondary">Các từ khóa - Tags: {docInfo.tags_json || 'None'}</Text>
                         </>
                         ),
                     },
@@ -44,7 +44,7 @@ const AutoRouteVisualization = ({ routeInfo, docInfo }) => {
                         children: (
                         <>
                             <Text strong>2. Tìm thấy Quy tắc khớp (Rule Match)</Text><br/>
-                            <Tag color="blue">Priority: {workflow.priority || 'Normal'}</Tag>
+                            <Tag color="blue">Độ ưu tiên: {workflow.priority || 'Normal'}</Tag>
                         </>
                         ),
                     },
@@ -72,9 +72,9 @@ const AutoRouteVisualization = ({ routeInfo, docInfo }) => {
                         size="small"
                         current={1}
                         items={[
-                            { title: 'Upload', status: 'finish' },
-                            { title: 'Processing Workflow', status: 'process', icon: <Spin indicator={<ClockCircleOutlined spin />} /> },
-                            { title: 'Approval', status: 'wait' },
+                            { title: 'Tải lên', status: 'finish' },
+                            { title: 'Xử lý Quy trình', status: 'process', icon: <Spin indicator={<ClockCircleOutlined spin />} /> },
+                            { title: 'Phê duyệt', status: 'wait' },
                         ]}
                         />
                         <div style={{marginTop: 16}}>

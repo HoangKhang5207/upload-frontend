@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { App, Upload, Spin, Row, Col, Card, Result, Button, Space, Typography, Switch, Form, Alert, Descriptions, Tag, Divider, DatePicker, Select, Steps, Timeline, Modal, Input } from 'antd';
+import { App, Upload, Spin, Row, Col, Card, Result, Button, Space, Typography, Switch, Form, Alert, Descriptions, Tag, Divider, DatePicker, Select, Steps, Timeline, Modal, Input, Tabs, Empty, List, Collapse } from 'antd';
 import {
     UploadOutlined,
     CheckCircleOutlined,
@@ -14,7 +14,8 @@ import {
     EyeOutlined,
     FileTextOutlined,
     InfoCircleOutlined,
-    FolderOpenOutlined
+    FolderOpenOutlined,
+    WarningOutlined, BugOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
@@ -29,6 +30,7 @@ import ProcessingSteps from '../../components/dms/upload/ProcessingSteps';
 import ProcessingResultDetails from '../../components/dms/upload/ProcessingResultDetails';
 import OcrPagedViewer from '../../components/dms/upload/OcrPagedViewer';
 import AutoRouteVisualization from '../../components/dms/upload/AutoRouteVisualization';
+import DuplicateAnalysis from '../../components/dms/upload/DuplicateAnalysis';
 
 console.log("DEBUG IMPORT CHECK:");
 // console.log("InputField:", InputField);
@@ -47,14 +49,7 @@ const { Title, Paragraph, Text } = Typography;
 const { Dragger } = Upload; // <-- Dùng Dragger của Antd
 const { Option } = Select;
 const { TextArea } = Input;
-
-// Mock Data cho Người nhận (Recipients) - Vì chưa có API User List đầy đủ
-// const MOCK_USERS = [
-//     { id: 101, name: 'Nguyễn Văn A (Trưởng phòng)', department: 'Hành chính' },
-//     { id: 102, name: 'Trần Thị B (Chuyên viên)', department: 'Nhân sự' },
-//     { id: 103, name: 'Lê Văn C (Giám đốc)', department: 'Ban Giám Đốc' },
-//     { id: 104, name: 'Phạm Thị D (Kế toán trưởng)', department: 'Tài chính' },
-// ];
+const { Panel } = Collapse;
 
 // --- Main Page Component ---
 const UC39_UploadPage = () => {
@@ -79,9 +74,11 @@ const UC39_UploadPage = () => {
     const [recipientUsers, setRecipientUsers] = useState([]); // List user thật từ API
     const [isOcrModalVisible, setIsOcrModalVisible] = useState(false); // Modal confirm OCR
     const [ocrPages, setOcrPages] = useState([]); // Lưu nội dung OCR theo trang
-
-    // Antd hooks
     const [showExpiryDate, setShowExpiryDate] = useState(false);
+
+    // State lưu tên danh mục để hiển thị kết quả
+    const [selectedCategoryName, setSelectedCategoryName] = useState("");
+
     const { message, notification } = App.useApp();
     const [form] = Form.useForm();
 
@@ -130,16 +127,38 @@ const UC39_UploadPage = () => {
             // Convert ISO string date back to dayjs object for Antd DatePicker if needed
             expiryDate: metadata.expiryDate ? dayjs(metadata.expiryDate) : null
         });
+
+        // Cập nhật tên danh mục khi metadata thay đổi (Trường hợp AI gợi ý)
+        if (metadata.category && categories.length > 0) {
+            const foundCat = categories.find(c => c.id === metadata.category);
+            // Ưu tiên lấy tên từ AI suggestion nếu có, không thì lấy từ list
+            const name = foundCat ? foundCat.name : (metadata.categoryName || "");
+            setSelectedCategoryName(name);
+        }
         
         // Check conditions to show fields immediately
         checkConditionalFields(metadata);
-    }, [metadata, form]);
+    }, [metadata, form, categories]);
 
     const checkConditionalFields = (currentMeta) => {
         // UC-39: Ngày hết hạn bắt buộc nếu LOCKED hoặc AccessType=Public (UC-86 expiration)
         const isLocked = currentMeta.confidentiality === 'LOCKED';
         const isPublic = currentMeta.accessType === 'public';
         setShowExpiryDate(isLocked || isPublic);
+    };
+
+    // Handler riêng cho việc chọn Category thủ công
+    const handleCategoryChange = (value) => {
+        const foundCat = categories.find(c => c.id === value);
+        const catName = foundCat ? foundCat.name : "";
+        
+        setSelectedCategoryName(catName); // Update local state cho visualization
+        
+        // Update context
+        dispatch({
+            type: actionTypes.SET_METADATA, 
+            payload: { ...metadata, category: value, categoryName: catName } 
+        });
     };
 
     // --- Logic xử lý file (Thay thế toast bằng message/notification) ---
@@ -179,7 +198,7 @@ const UC39_UploadPage = () => {
                 updateStepStatus(1, 'completed');
                 updateStepStatus(2, 'error');
                 message.destroy(loadingKey);
-                notification.error({
+                notification.warning({
                     message: 'Phát hiện trùng lặp!',
                     description: result.message,
                     duration: 6,
@@ -214,7 +233,9 @@ const UC39_UploadPage = () => {
                 // Đảm bảo summary tồn tại trong object metadata
                 const metaWithSummary = {
                     ...suggestedMeta,
-                    summary: suggestedMeta.summary || '' // Lưu summary gốc
+                    summary: suggestedMeta.summary || '', // Lưu summary gốc
+                    // Lưu categoryName từ AI suggestion để binding sau này
+                    categoryName: suggestedMeta.category_name_suggestion
                 };
 
                 // Cập nhật metadata trong state
@@ -294,24 +315,6 @@ const UC39_UploadPage = () => {
 
     const handleRemoveFile = () => {
         dispatch({ type: actionTypes.RESET_STATE });
-    };
-
-    // const handleMetadataChange = (e) => {
-    //     const { name, value } = e.target;
-    //     form.setFieldsValue({ [name]: value });
-    //     dispatch({ type: actionTypes.UPDATE_METADATA_FIELD, payload: { field: name, value } });
-    // };
-
-    const handleFormValuesChange = (changedValues, allValues) => {
-        // Update state
-        dispatch({ type: actionTypes.SET_METADATA, payload: { ...metadata, ...allValues } });
-        
-        // Logic hiển thị trường dynamic
-        if ('confidentiality' in changedValues || 'accessType' in changedValues) {
-            const conf = changedValues.confidentiality || allValues.confidentiality;
-            const access = changedValues.accessType || allValues.accessType;
-            setShowExpiryDate(conf === 'LOCKED' || access === 'public');
-        }
     };
 
     const handleFinalize = async () => {
@@ -404,25 +407,14 @@ const UC39_UploadPage = () => {
                     <ProcessingSteps steps={processingSteps} />
                 </div>
             )}
+            {/* Hiển thị chi tiết Trùng lặp */}
             {apiResponse?.duplicateError && (
-                 <Alert
-                    message="Phát hiện trùng lặp! (409 Conflict)"
-                    description={
-                        <div>
-                            <Text>Hệ thống phát hiện tài liệu tương đồng <b>{apiResponse.duplicateError.duplicateData.similarity}</b>.</Text>
-                            <br/>
-                            <Text type="secondary">Tài liệu gốc: {apiResponse.duplicateError.duplicateData.existingDocument.name}</Text>
-                        </div>
-                    }
-                    type="error"
-                    showIcon
-                    action={
-                        <Button size="small" danger onClick={handleRemoveFile}>
-                            Tải lên file khác
-                        </Button>
-                    }
-                    style={{ marginTop: 24 }}
-                />
+                <div style={{marginTop: 24}}>
+                    <DuplicateAnalysis duplicateError={apiResponse.duplicateError} />
+                    <div style={{textAlign: 'center', marginTop: 16}}>
+                        <Button danger onClick={() => dispatch({type: actionTypes.RESET_STATE})}>Hủy & Chọn file khác</Button>
+                    </div>
+                </div>
             )}
         </Card>
     );
@@ -447,7 +439,13 @@ const UC39_UploadPage = () => {
                                 rules={[{required: true, message: 'Vui lòng chọn danh mục'}]}
                                 help={metadata.category ? <Text type="success">AI đã chọn danh mục này dựa trên nội dung.</Text> : "Chọn danh mục để kích hoạt quy trình."}
                             >
-                                <Select placeholder="Chọn danh mục" optionFilterProp="children" showSearch>
+                                <Select 
+                                    placeholder="Chọn danh mục" 
+                                    optionFilterProp="children" 
+                                    showSearch 
+                                    allowClear
+                                    onChange={handleCategoryChange} // Gắn handler custom
+                                >
                                     {categories.map(c => <Option key={c.id} value={c.id}>{c.name}</Option>)}
                                 </Select>
                             </Form.Item>
@@ -592,7 +590,7 @@ const UC39_UploadPage = () => {
                             </Tag>
                         </Descriptions.Item>
                         {document.public_link && (
-                            <Descriptions.Item label="Public Link" span={2}>
+                            <Descriptions.Item label="Liên kết công khai" span={2}>
                                 <Typography.Link href={document.public_link} target="_blank" copyable>
                                     {document.public_link}
                                 </Typography.Link> <Tag color="orange">Hết hạn sau 72h</Tag>
