@@ -1,8 +1,10 @@
 import React from 'react';
-import { Card, Alert, Input, Typography, Space } from 'antd';
+import { Card, Alert, List, Tag, Typography, Space, Collapse } from 'antd';
 import {
     CheckCircleOutlined,
     WarningOutlined,
+    InfoCircleOutlined,
+    BugOutlined,
     FileTextOutlined,
     ExperimentOutlined,
     SafetyCertificateOutlined,
@@ -10,20 +12,20 @@ import {
 } from '@ant-design/icons';
 
 const { Text, Title, Paragraph } = Typography;
-const { TextArea } = Input;
+const { Panel } = Collapse;
 
 const ProcessingResultDetails = ({ apiResponse }) => {
     if (!apiResponse) return null;
 
-    const { denoiseInfo, ocrContent, suggestedMetadata, conflicts, watermarkInfo } = apiResponse;
+    const { denoiseInfo, suggestedMetadata, conflicts, warnings, watermarkInfo } = apiResponse;
 
     return (
         <Space direction="vertical" style={{ width: '100%' }} size="large">
-            <Title level={4}>Chi tiết Kết quả Xử lý Backend</Title>
+            <Title level={4}>Chi tiết Kết quả Xử lý</Title>
             
             {/* 1. Kết quả Khử nhiễu ảnh (AI) */}
             {denoiseInfo && (
-                <Card title="1. Khử nhiễu ảnh (AI)" size="small" headStyle={{backgroundColor: '#fafafa'}}>
+                <Card title="Khử nhiễu ảnh (AI)" size="small" headStyle={{backgroundColor: '#fafafa'}}>
                     {denoiseInfo.denoised ? (
                         <Alert
                             message={denoiseInfo.message}
@@ -42,19 +44,8 @@ const ProcessingResultDetails = ({ apiResponse }) => {
                 </Card>
             )}
 
-            {/* 2. Kết quả OCR & Trích xuất văn bản */}
-            <Card title="2. OCR & Trích xuất văn bản" size="small" headStyle={{backgroundColor: '#fafafa'}}>
-                <Text type="secondary">Nội dung đã trích xuất:</Text>
-                <TextArea
-                    readOnly
-                    value={ocrContent || "Không có nội dung được trích xuất."}
-                    rows={4}
-                    style={{ marginTop: 8, backgroundColor: '#f5f5f5', color: '#555' }}
-                />
-            </Card>
-
-            {/* 4. Gợi ý & Trích xuất Key-Values */}
-            <Card title="4. Gợi ý & Trích xuất Key-Values" size="small" headStyle={{backgroundColor: '#fafafa'}}>
+            {/* 2. Gợi ý & Trích xuất Key-Values */}
+            <Card title="Gợi ý & Trích xuất Key-Values" size="small" headStyle={{backgroundColor: '#fafafa'}}>
                  <Text type="secondary">Các cặp Key-Value được nhận dạng:</Text>
                 <pre style={{ 
                     backgroundColor: '#282c34', 
@@ -69,40 +60,48 @@ const ProcessingResultDetails = ({ apiResponse }) => {
                 </pre>
             </Card>
             
-            {/* 5. Kết quả Kiểm tra mâu thuẫn dữ liệu */}
-            <Card title="5. Kiểm tra mâu thuẫn dữ liệu" size="small" headStyle={{backgroundColor: '#fafafa'}}>
-                {conflicts && conflicts.length > 0 ? (
-                    <Alert
-                        message={`Phát hiện ${conflicts.length} mâu thuẫn:`}
-                        description={
-                            <ul>
-                                {conflicts.map((c, i) => (
-                                    <li key={i}>
-                                        Trường "<strong>{c.field}</strong>" (<em>{c.value}</em>): {c.message}
-                                    </li>
-                                ))}
-                            </ul>
-                        }
-                        type="error"
-                        showIcon
-                        icon={<WarningOutlined />}
+            {/* 3. Kết quả Kiểm tra mâu thuẫn dữ liệu */}
+            {conflicts && conflicts.length > 0 && (
+                <Card 
+                    title={<span style={{color: '#cf1322'}}><BugOutlined /> Mâu thuẫn dữ liệu</span>} 
+                    size="small"
+                    headStyle={{backgroundColor: '#fff1f0', borderColor: '#ffa39e'}}
+                    style={{borderColor: '#ffa39e'}}
+                >
+                    <List
+                        size="small"
+                        dataSource={conflicts}
+                        renderItem={item => (
+                            <List.Item>
+                                <Text type="danger"><WarningOutlined /> {item.message || item}</Text>
+                            </List.Item>
+                        )}
                     />
-                ) : (
-                     <Alert
-                        message="Không phát hiện mâu thuẫn dữ liệu nào."
-                        type="success"
-                        showIcon
-                        icon={<CheckCircleOutlined />}
-                    />
-                )}
-            </Card>
+                </Card>
+            )}
 
-             {/* 6. Kết quả Nhúng watermark bảo vệ */}
+            {/* 4. Cảnh báo thiếu thông tin (UC-73) */}
+            {warnings && warnings.length > 0 && (
+                <Collapse ghost size="small">
+                    <Panel header={<Text type="warning"><WarningOutlined /> {warnings.length} Cảnh báo thiếu dữ liệu</Text>} key="1">
+                        <List
+                            size="small"
+                            dataSource={warnings}
+                            renderItem={item => (
+                                <List.Item>
+                                    <Text type="secondary">{item.message}</Text>
+                                </List.Item>
+                            )}
+                        />
+                    </Panel>
+                </Collapse>
+            )}
+
+             {/* 5. Kết quả Nhúng watermark bảo vệ */}
             {watermarkInfo && (
-                <Card title="6. Nhúng Watermark bảo vệ" size="small" headStyle={{backgroundColor: '#fafafa'}}>
+                <Card title="Nhúng Watermark bảo vệ" size="small" headStyle={{backgroundColor: '#fafafa'}}>
                      <Alert
                         message={watermarkInfo.message}
-                        description={<Text>File đã nhúng: <Text code>{watermarkInfo.watermarkedFile?.name || "Không có thông tin file"}</Text></Text>}
                         type="success"
                         showIcon
                         icon={<SafetyCertificateOutlined />}

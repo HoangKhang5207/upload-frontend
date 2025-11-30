@@ -7,12 +7,13 @@ const API_BASE_URL = 'http://localhost:8000/api/document'; // Cập nhật đún
  * @param {boolean} duplicateCheckEnabled - Có bật kiểm tra trùng lặp không
  * @returns {Promise<object>} - Kết quả xử lý từ backend
  */
-export const processUpload = async (file, duplicateCheckEnabled = true) => {
+export const processUpload = async (file, duplicateCheckEnabled = true, forceOcr = false) => {
   console.log("Processing upload for file:", file.name);
   
   const formData = new FormData();
   formData.append('upload_file', file);
   formData.append('duplicate_check_enabled', duplicateCheckEnabled);
+  formData.append('force_ocr', forceOcr);
 
   // Gọi endpoint: POST http://localhost:8000/api/document/process_upload
   const response = await fetch(`${API_BASE_URL}/process_upload`, {
@@ -40,15 +41,27 @@ export const finalizeUpload = async (file, metadata) => {
   const formData = new FormData();
   formData.append('upload_file', file);
   
-  // Mapping Metadata từ UI sang Backend Field names
+  // 1. Mapping Data Fields theo UC-39 3.2.39.4
   formData.append('title', metadata.title);
-  formData.append('category_id', metadata.category); // Backend cần int
-  formData.append('tags', metadata.tags || '');
+  formData.append('category_id', metadata.category);
+  // Convert mảng tags thành string phân cách phẩy
+  const tagsString = Array.isArray(metadata.tags) ? metadata.tags.join(',') : (metadata.tags || '');
+  formData.append('tags', tagsString);
+  
   formData.append('access_type', metadata.accessType || 'private');
   formData.append('confidentiality', metadata.confidentiality || 'INTERNAL');
   formData.append('description', metadata.description || '');
   
-  // Các trường ẩn từ Phase 1
+  // 2. Các trường MỚI bổ sung
+  if (metadata.expiryDate) {
+      formData.append('expiry_date', metadata.expiryDate); // ISO string
+  }
+  if (metadata.recipients) {
+      // Backend mong đợi JSON string cho mảng ID
+      formData.append('recipients_json', JSON.stringify(metadata.recipients));
+  }
+
+  // 3. Hidden fields from Phase 1 (Metadata Suggestion)
   if (metadata.ocrContent) formData.append('ocr_content', metadata.ocrContent);
   if (metadata.total_pages) formData.append('total_pages', metadata.total_pages);
   if (metadata.key_values) formData.append('key_values_json', JSON.stringify(metadata.key_values));
@@ -72,4 +85,17 @@ export const getCategories = async () => {
     if (!response.ok) throw new Error("Failed to fetch categories");
     const res = await response.json();
     return res.data; // Trả về mảng [{id, name}, ...]
+};
+
+// API lấy User
+export const fetchUsersByDepartment = async () => {
+    try {
+        // Gọi endpoint /users/suggestion đã thêm ở Backend
+        const response = await fetch(`${API_BASE_URL}/users/suggestion`);
+        const res = await response.json();
+        return res.data || [];
+    } catch (e) {
+        console.error("Failed to load users", e);
+        return [];
+    }
 };

@@ -1,42 +1,52 @@
 import React from 'react';
-import { Form, Select } from 'antd';
+import { Form, Select, Typography } from 'antd';
+import { InfoCircleOutlined } from '@ant-design/icons';
 
 const { Option } = Select;
+const { Text } = Typography;
 
-const SelectField = ({ label, id, value, onChange, options, required = false, name }) => {
-  
-  // Xử lý sự kiện onChange của Antd Select (chỉ trả về value)
-  const handleChange = (newValue) => {
-    // Tạo một đối tượng sự kiện giả lập
-    const event = {
-      target: {
-        name: name || id,
-        value: newValue
-      }
-    };
-    onChange(event); // Gọi hàm onChange gốc với sự kiện giả lập
-  };
+const SelectField = ({ 
+    label, 
+    name, 
+    options = [], 
+    rules = [], 
+    required = false, 
+    placeholder, 
+    mode, 
+    helpText,
+    disabled = false,
+    onChange
+}) => {
+    const finalRules = required 
+        ? [{ required: true, message: `Vui lòng chọn ${label ? label.toLowerCase() : 'thông tin này'}!` }, ...rules]
+        : rules;
 
-  return (
-    <Form.Item
-      label={label}
-      htmlFor={id}
-      required={required}
-    >
-      <Select
-        id={id}
-        name={name || id}
-        value={value}
-        onChange={handleChange} // Dùng hàm xử lý mới
-        required={required}
-        placeholder="-- Chọn --"
-      >
-        {options.map(opt => (
-          <Option key={opt.id} value={opt.id}>{opt.name}</Option>
-        ))}
-      </Select>
-    </Form.Item>
-  );
+    console.log("Rendering SelectField:", { label, name, options, required, disabled });
+
+    return (
+        <Form.Item
+            label={label}
+            name={name}
+            rules={finalRules}
+            help={helpText && <Text type="secondary" style={{fontSize: 12}}><InfoCircleOutlined /> {helpText}</Text>}
+        >
+            <Select
+                mode={mode}
+                placeholder={placeholder || `Chọn ${label}`}
+                disabled={disabled}
+                onChange={onChange}
+                allowClear
+                showSearch
+                optionFilterProp="children"
+            >
+                {options && options.map((opt) => (
+                    <Option key={opt.id} value={opt.id} label={opt.name}>
+                        {opt.name}
+                    </Option>
+                ))}
+            </Select>
+        </Form.Item>
+    );
 };
 
 export default SelectField;
