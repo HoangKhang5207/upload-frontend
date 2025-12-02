@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { App, Upload, Spin, Row, Col, Card, Result, Button, Space, Typography, Switch, Form, Alert, Descriptions, Tag, Divider, DatePicker, Select, Steps, Timeline, Modal, Input, Tabs, Empty, List, Collapse } from 'antd';
+import { App, Upload, Spin, Row, Col, Card, Result, Button, Space, Typography, Switch, Form, Alert, Descriptions, Tag, Divider, DatePicker, Select, Steps, Timeline, Modal, Input, Tabs, Empty, List, Collapse, Radio, Checkbox } from 'antd';
 import {
     UploadOutlined,
     CheckCircleOutlined,
@@ -13,6 +13,8 @@ import {
     SafetyCertificateOutlined, 
     EyeOutlined,
     FileTextOutlined,
+    LoadingOutlined,
+    SettingOutlined,
     InfoCircleOutlined,
     FolderOpenOutlined,
     WarningOutlined, BugOutlined
@@ -23,33 +25,25 @@ import dayjs from 'dayjs';
 import { useUpload, actionTypes } from '../../contexts/UploadContext';
 
 // --- Component Imports (ĐÃ ĐƯỢC REFACTOR) ---
-// import InputField from '../../components/common/InputField';
-// import SelectField from '../../components/common/SelectField';
 import FileProgress from '../../components/dms/upload/FileProgress';
 import ProcessingSteps from '../../components/dms/upload/ProcessingSteps';
 import ProcessingResultDetails from '../../components/dms/upload/ProcessingResultDetails';
 import OcrPagedViewer from '../../components/dms/upload/OcrPagedViewer';
 import AutoRouteVisualization from '../../components/dms/upload/AutoRouteVisualization';
 import DuplicateAnalysis from '../../components/dms/upload/DuplicateAnalysis';
+import AdvancedSettingsPanel from '../../components/dms/upload/AdvancedSettingsPanel';
 
-console.log("DEBUG IMPORT CHECK:");
-// console.log("InputField:", InputField);
-// console.log("SelectField:", SelectField);
-console.log("OcrPagedViewer:", OcrPagedViewer);
-console.log("AutoRouteVisualization:", AutoRouteVisualization);
-console.log("ProcessingResultDetails:", ProcessingResultDetails);
-
-// --- Mock API Imports ---
-import { mockGetCategories } from '../../api/mockDmsApi';
 // Thêm import API thực tế
 import * as uploadApi from '../../api/uploadApi';
-import * as mockUploadApi from '../../api/mockUploadApi';
 
 const { Title, Paragraph, Text } = Typography;
 const { Dragger } = Upload; // <-- Dùng Dragger của Antd
 const { Option } = Select;
 const { TextArea } = Input;
 const { Panel } = Collapse;
+
+// --- CẤU HÌNH DELAY (UX) ---
+const STEP_DELAY_MS = 100000;
 
 // --- Main Page Component ---
 const UC39_UploadPage = () => {
@@ -65,8 +59,16 @@ const UC39_UploadPage = () => {
         categories,
     } = state;
 
+    // --- FEATURE TOGGLES STATE ---
+    const [featureFlags, setFeatureFlags] = useState({
+        enableDenoise: true,
+        enableOcr: true,
+        enableDuplicateCheck: true,
+        enableMetadata: true,
+        ocrEngine: 'tesseract', // 'tesseract' or 'easyocr'
+    });
+
     // State cục bộ
-    const [duplicateCheckEnabled, setDuplicateCheckEnabled] = useState(true);
     const [uploadPermissionEnabled, setUploadPermissionEnabled] = useState(true);
     const [deviceType, setDeviceType] = useState('desktop');
 
@@ -78,6 +80,10 @@ const UC39_UploadPage = () => {
 
     // State lưu tên danh mục để hiển thị kết quả
     const [selectedCategoryName, setSelectedCategoryName] = useState("");
+
+    // --- STATE LOADING (Điều khiển hiển thị) ---
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [processingMessage, setProcessingMessage] = useState("Đang khởi tạo...");
 
     const { message, notification } = App.useApp();
     const [form] = Form.useForm();
@@ -161,114 +167,195 @@ const UC39_UploadPage = () => {
         });
     };
 
-    // --- Logic xử lý file (Thay thế toast bằng message/notification) ---
-    const processFile = useCallback(async (selectedFile, forceOcr = false) => {
-        const loadingKey = 'processing';
-        message.loading({ content: 'Đang xử lý file (OCR, Check trùng)...', key: loadingKey, duration: 0 });
+    // --- UTILS: SLEEP FUNCTION ---
+    const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-        const steps = [
-            { name: 'Khử nhiễu ảnh (AI)', status: 'pending', description: 'Cải thiện chất lượng ảnh scan' },
-            { name: 'OCR & Trích xuất văn bản', status: 'pending', description: 'Trích xuất nội dung từ tài liệu' },
-            { name: 'Kiểm tra trùng lặp (CSDL)', status: 'pending', description: 'So sánh với các tài liệu đã có' },
-            { name: 'Gợi ý & Trích xuất Key-Values', status: 'pending', description: 'Phân tích và đề xuất thông tin' },
-            { name: 'Kiểm tra mâu thuẫn dữ liệu', status: 'pending', description: 'Xác minh tính hợp lệ của metadata' },
-            { name: 'Nhúng watermark bảo vệ', status: 'pending', description: 'Bảo vệ bản quyền tài liệu' }
+    // --- STREAM PROCESSING LOGIC ---
+    const processFile = useCallback(async (selectedFile, forceOcr = false, overrideOptions = {}) => {
+        // A. HỢP NHẤT OPTIONS (Merge Feature Flags với lựa chọn từ Modal)
+        const currentOptions = { ...featureFlags, ...overrideOptions };
+        
+        // B. CẤU HÌNH DANH SÁCH BƯỚC (STEPS CONFIG)
+        // Lưu ý: Logic 'enabled' ở đây quyết định bước đó CÓ CHẠY hay không
+        // Logic 'visible' (hiển thị trên UI) là luôn luôn hiển thị để user biết quy trình
+        const stepsConfig = [
+            { 
+                name: 'Khử nhiễu ảnh', 
+                key: 'denoise', 
+                // Chỉ chạy nếu user bật VÀ là file ảnh
+                enabled: currentOptions.enableDenoise && selectedFile.type.startsWith('image/') 
+            },
+            { 
+                name: `OCR - Trích xuất văn bản`, 
+                key: 'ocr', 
+                // Chạy nếu user bật HOẶC bị ép buộc (Force)
+                enabled: currentOptions.enableOcr || forceOcr 
+            },
+            { 
+                name: 'Kiểm tra trùng lặp', 
+                key: 'duplicate', 
+                enabled: currentOptions.enableDuplicateCheck 
+            },
+            { 
+                name: 'Gợi ý Metadata & Kiểm tra mâu thuẫn', 
+                key: 'metadata', 
+                enabled: currentOptions.enableMetadata 
+            },
+            { 
+                name: 'Tổng hợp kết quả', 
+                key: 'final', 
+                enabled: true 
+            }
         ];
-        dispatch({ type: actionTypes.SET_PROCESSING_STEPS, payload: steps });
 
-        const updateStepStatus = (stepIndex, status) => {
-            dispatch({ type: actionTypes.UPDATE_STEP_STATUS, payload: { stepIndex, status } });
-        };
+        // C. TÍNH TOÁN TIẾN ĐỘ
+        const activeSteps = stepsConfig.filter(s => s.enabled);
+        const progressPerStep = 100 / activeSteps.length;
+
+        // D. KHỞI TẠO TRẠNG THÁI BAN ĐẦU CHO UI
+        // Nếu overrideOptions tắt OCR, ta set trạng thái ban đầu của bước đó là 'skipped' ngay lập tức
+        const initialStepsUI = stepsConfig.map(s => ({
+            name: s.name,
+            key: s.key,
+            // Nếu bước bị disable do override (ví dụ Skip OCR), set status là skipped luôn
+            status: s.enabled ? 'pending' : 'skipped',
+            description: s.enabled ? 'Đang chờ...' : 'Đã bỏ qua theo yêu cầu'
+        }));
+
+        // Reset UI về trạng thái bắt đầu chạy
+        dispatch({ type: actionTypes.UPDATE_PROGRESS, payload: 0 });
+        dispatch({ type: actionTypes.SET_PROCESSING_STEPS, payload: initialStepsUI });
+
+        setIsProcessing(true);
+        setProcessingMessage("Đang khởi tạo quy trình xử lý...");
 
         try {
-            // Gọi API thực tế để xử lý file
-            const result = await uploadApi.processUpload(selectedFile, duplicateCheckEnabled, forceOcr);
-            
-            // Case 1: PDF Scan Detected (Backend trả về cờ isScannedPdf)
-            if (result.data?.isScannedPdf) {
-                message.destroy(loadingKey);
-                setIsOcrModalVisible(true); // Hiển thị Modal hỏi ý kiến User
-                return;
-            }
+            // E. GỌI API STREAMING VỚI CALLBACK XỬ LÝ SỰ KIỆN
+            const result = await uploadApi.processUploadStream(selectedFile, { ...currentOptions, forceOcr }, async (event) => {
+                console.log("Stream Event:", event);
 
-            // Case 2: Duplicate Error
-            if (result.status === "409") {
-                // Phát hiện trùng lặp
-                updateStepStatus(0, 'completed');
-                updateStepStatus(1, 'completed');
-                updateStepStatus(2, 'error');
-                message.destroy(loadingKey);
-                notification.warning({
-                    message: 'Phát hiện trùng lặp!',
-                    description: result.message,
-                    duration: 6,
-                    placement: 'topRight'
-                });
-                dispatch({ type: actionTypes.SET_API_RESPONSE, payload: { ...state.apiResponse, duplicateError: result } });
-                return;
-            }
-            
-            // Case 3: Success
-            if (result.status === "200") {
-                // Xử lý thành công, cập nhật tất cả các bước
-                steps.forEach((_, index) => updateStepStatus(index, 'completed'));
-                
-                // Tạo đối tượng phản hồi tương tự như mock
-                const fullApiResponse = {
-                    ocrContent: result.data.ocrContent,
-                    total_pages: result.data.total_pages,
-                    suggestedMetadata: result.data.suggestedMetadata,
-                    warnings: result.data.warnings || [],
-                    conflicts: result.data.conflicts || [],
-                    denoiseInfo: result.data.denoiseInfo || { denoised: false, message: "Không phải file ảnh, bỏ qua khử nhiễu." },
-                    watermarkInfo: result.data.watermarkInfo || { success: true, message: "Sẵn sàng nhúng watermark 'Confidential - INNOTECH' (nếu cần)." }
-                };
+                // Bỏ qua event system/error để xử lý ở block catch/result check
+                if (!event.step || event.step === 'system' || event.status === 'error' || event.status === 'warning') return;
 
-                // Lưu OCR Pages vào State riêng để hiển thị UI
-                setOcrPages(result.data.ocrPages || []);
+                // Tìm index trong danh sách UI để update icon/text
+                const uiIndex = stepsConfig.findIndex(s => s.key === event.step);
+                // Tìm index trong danh sách Active để tính %
+                const activeIndex = activeSteps.findIndex(s => s.key === event.step);
 
-                dispatch({ type: actionTypes.SET_API_RESPONSE, payload: fullApiResponse });
-                
-                const suggestedMeta = result.data.suggestedMetadata || {};
-                // Đảm bảo summary tồn tại trong object metadata
-                const metaWithSummary = {
-                    ...suggestedMeta,
-                    summary: suggestedMeta.summary || '', // Lưu summary gốc
-                    // Lưu categoryName từ AI suggestion để binding sau này
-                    categoryName: suggestedMeta.category_name_suggestion
-                };
+                if (uiIndex === -1) return;
 
-                // Cập nhật metadata trong state
-                dispatch({ type: actionTypes.SET_METADATA, payload: metaWithSummary });
-                
-                if (suggestedMeta.category) {
-                    message.success({ 
-                        content: `AI gợi ý: ${suggestedMeta.category_name_suggestion}`, 
-                        key: loadingKey, duration: 4 
+                // --- XỬ LÝ TRẠNG THÁI ---
+                // --- GIAI ĐOẠN 1: BẮT ĐẦU XỬ LÝ (Processing) ---
+                if (event.status === 'processing') {
+                    // 1. Cập nhật Message Top Center
+                    setProcessingMessage(event.message || `Đang xử lý: ${stepsConfig[uiIndex].name}...`);
+                    
+                    // 2. Cập nhật Step Icon -> Loading
+                    dispatch({ 
+                        type: actionTypes.UPDATE_STEP_STATUS, 
+                        payload: { stepIndex: uiIndex, status: 'processing', description: event.message } 
                     });
-                } else {
-                    message.success({ content: 'Xử lý hoàn tất', key: loadingKey });
+
+                    // 3. Cập nhật Progress Bar (Nhích nhẹ để user biết đang chạy)
+                    // Logic: Progress hiện tại = (Số bước đã xong * %) + (10% của bước đang chạy)
+                    if (activeIndex !== -1) {
+                        const currentBaseProgress = activeIndex * progressPerStep;
+                        dispatch({ type: actionTypes.UPDATE_PROGRESS, payload: Math.round(currentBaseProgress + (progressPerStep * 0.1)) });
+                    }
+
+                    // 4. DELAY để user kịp đọc "Đang xử lý..."
+                    await wait(STEP_DELAY_MS); 
                 }
 
-                message.success({ content: 'Xử lý file thành công. Vui lòng xem lại thông tin.', key: loadingKey, duration: 4 });
-                dispatch({ type: actionTypes.SET_STEP, payload: 3 });
-            } else {
-                throw new Error(result.message || "Có lỗi xảy ra trong quá trình xử lý file");
-            }
+                // --- GIAI ĐOẠN 2: HOÀN THÀNH XỬ LÝ (Completed/Skipped/Success) ---
+                else if (['completed', 'skipped', 'success'].includes(event.status)) {
+                    // Map status 'success' -> 'completed' cho UI Component hiểu
+                    const uiStatus = event.status === 'success' ? 'completed' : event.status;
 
-        } catch (error) {
-            // Xử lý lỗi
-            steps.forEach((_, index) => updateStepStatus(index, 'error'));
-            
-            message.error({ content: `Có lỗi xảy ra: ${error.message}`, key: loadingKey, duration: 5 });
-            notification.error({
-                message: 'Lỗi xử lý file',
-                description: error.message,
-                placement: 'topRight'
+                    // 1. Cập nhật Message Top Center
+                    setProcessingMessage(event.message || `Hoàn tất: ${stepsConfig[uiStatus].name}`);
+
+                    // 2. Cập nhật Step Icon -> Done/Check
+                    dispatch({ 
+                        type: actionTypes.UPDATE_STEP_STATUS, 
+                        payload: { stepIndex: uiIndex, status: uiStatus, description: event.message } 
+                    });
+
+                    // 3. Cập nhật Progress Bar (Full bước đó)
+                    if (activeIndex !== -1) {
+                        // Logic: (Index + 1) * % mỗi bước. 
+                        // Nếu là bước cuối cùng (final) -> ép về 100%
+                        let newPercent = Math.round((activeIndex + 1) * progressPerStep);
+                        if (newPercent > 100) newPercent = 100; // Safety cap
+                        
+                        dispatch({ type: actionTypes.UPDATE_PROGRESS, payload: newPercent });
+                    }
+
+                    // 4. DELAY để user kịp nhìn thấy Check xanh và thanh Progress chạy đầy
+                    await wait(STEP_DELAY_MS);
+                }
             });
+
+            console.log("Final processing result:", result);
+
+            // Xử lý kết quả cuối cùng
+            if (result) {
+                if (result.status === '200') {
+                    // Force Step Cuối cùng thành Completed
+                    const finalStepIndex = stepsConfig.findIndex(s => s.key === 'final');
+                    if (finalStepIndex !== -1) {
+                        dispatch({ 
+                            type: actionTypes.UPDATE_STEP_STATUS, 
+                            payload: { stepIndex: finalStepIndex, status: 'completed', description: 'Hoàn tất toàn bộ.' } 
+                        });
+                    }
+
+                    //Force Progress 100%
+                    dispatch({ type: actionTypes.UPDATE_PROGRESS, payload: 100 });
+                    setProcessingMessage("Xử lý thành công! Đang chuyển hướng...");
+                    
+                    // Delay cuối cùng trước khi chuyển màn hình
+                    await wait(8000);
+
+                    const fullData = result.data;
+                    
+                    setOcrPages(fullData.ocrPages || []);
+                    dispatch({ type: actionTypes.SET_API_RESPONSE, payload: fullData });
+                    
+                    const metaWithSummary = {
+                        ...fullData.suggestedMetadata,
+                        summary: fullData.suggestedMetadata?.summary || '',
+                        categoryName: fullData.suggestedMetadata?.category_name_suggestion
+                    };
+                    dispatch({ type: actionTypes.SET_METADATA, payload: metaWithSummary });
+
+                    // Thông báo hoàn tất toàn bộ
+                    notification.success({
+                        message: 'Thành công',
+                        description: 'Tài liệu đã được phân tích. Vui lòng kiểm tra lại thông tin.',
+                        placement: 'bottomRight',
+                        duration: 5
+                    });
+                    dispatch({ type: actionTypes.SET_STEP, payload: 3 });
+
+                } else if (result.status === 'warning' && result.code === 'SCANNED_PDF') {
+                    setIsOcrModalVisible(true);
+                } else if (result.status === 'error' && result.code === 'DUPLICATE_FOUND') {
+                    notification.warning({ message: 'Cảnh báo trùng lặp', description: result.message });
+                    dispatch({ type: actionTypes.SET_API_RESPONSE, payload: { ...apiResponse, duplicateError: result.data } });
+                } else {
+                    throw new Error(result.message || "Lỗi không xác định");
+                }
+            }
+        } catch (error) {
+            console.error(error);
+            setProcessingMessage("Xảy ra lỗi!");
+            notification.error({ message: 'Lỗi xử lý', description: error.message });
             dispatch({ type: actionTypes.RESET_STATE });
+        } finally {
+            setIsProcessing(false);
         }
-    }, [dispatch, duplicateCheckEnabled, message, notification, state.apiResponse]);
+    }, [dispatch, featureFlags, apiResponse, notification]);
 
     // Handler khi User xác nhận chạy OCR cho PDF Scan
     const handleConfirmOcr = () => {
@@ -278,40 +365,25 @@ const UC39_UploadPage = () => {
 
     const handleSkipOcr = () => {
         setIsOcrModalVisible(false);
-        // Có thể cho phép tiếp tục mà không có content (chỉ Metadata file) hoặc hủy
-        message.warning("Đã bỏ qua OCR. Tài liệu sẽ không thể tìm kiếm nội dung.");
-        dispatch({ type: actionTypes.SET_STEP, payload: 3 }); 
+        // Gọi lại processFile nhưng với overrideOptions tắt OCR
+        // Logic mới trong processFile sẽ nhận diện override này và set bước OCR thành 'skipped' ngay từ đầu
+        processFile(file, false, { enableOcr: false });
     };
-
-    // --- SỬA LỖI Ở ĐÂY ---
-    // 1. Xóa bỏ hook useDropzone
-    // const { getRootProps, getInputProps, isDragActive } = useDropzone({ ... });
     
-    // 2. Tạo hàm beforeUpload cho Antd
+    // Tạo hàm beforeUpload cho Antd. Handler xử lý file (từ Dragger)
     const handleBeforeUpload = (selectedFile) => {
         if (selectedFile.size > 50 * 1024 * 1024) {
             message.error("Lỗi: Kích thước file vượt quá 50MB.");
-            return Upload.LIST_IGNORE; // Ngăn Antd xử lý file
+            return Upload.LIST_IGNORE;
         }
-        
+        dispatch({ type: actionTypes.UPDATE_PROGRESS, payload: 0 });
         dispatch({ type: actionTypes.SET_FILE, payload: selectedFile });
         dispatch({ type: actionTypes.SET_STEP, payload: 2 });
-        
-        let progress = 0;
-        const interval = setInterval(() => {
-            progress += Math.random() * 25;
-            if (progress >= 100) {
-                progress = 100;
-                clearInterval(interval);
-                processFile(selectedFile); // Bắt đầu xử lý logic
-            }
-            dispatch({ type: actionTypes.UPDATE_PROGRESS, payload: progress });
-        }, 300);
 
-        return false; // Quan trọng: Ngăn Antd tự động upload
+        // Bắt đầu xử lý ngay
+        setTimeout(() => processFile(selectedFile), 100);
+        return false;
     };
-    // --- KẾT THÚC SỬA LỖI ---
-
 
     const handleRemoveFile = () => {
         dispatch({ type: actionTypes.RESET_STATE });
@@ -355,18 +427,16 @@ const UC39_UploadPage = () => {
         }
     };
 
-    // --- Render Logic ---
     const Step1_SelectFile = () => (
-         <Card title="Bước 1: Chọn tài liệu" bordered={false} style={{boxShadow: '0 2px 8px rgba(0,0,0,0.1)'}}>
-            <Space direction="vertical" style={{width: '100%'}} size="large">
-                <Row gutter={16} justify="center" align="middle">
+        <Card title="Bước 1: Chọn tài liệu" bordered={false} style={{boxShadow: '0 2px 8px rgba(0,0,0,0.1)'}}>
+            <Space direction="vertical" style={{width: '100%'}} size="middle">
+                {/* Feature Toggles UI */}
+                <AdvancedSettingsPanel featureFlags={featureFlags} setFeatureFlags={setFeatureFlags} />
+
+                <Row justify="center">
                     <Col>
                         <Text strong>Quyền Upload</Text>
                         <Switch checked={uploadPermissionEnabled} onChange={setUploadPermissionEnabled} style={{marginLeft: 8}} checkedChildren="Có quyền" unCheckedChildren="Không" />
-                    </Col>
-                    <Col>
-                        <Text strong>Kiểm tra trùng lặp</Text>
-                        <Switch checked={duplicateCheckEnabled} onChange={setDuplicateCheckEnabled} style={{marginLeft: 8}} />
                     </Col>
                 </Row>
 
@@ -377,12 +447,12 @@ const UC39_UploadPage = () => {
                         subTitle="Bạn không có quyền `documents:upload`. Vui lòng liên hệ quản trị viên."
                     />
                 ) : (
-                    // --- SỬA LỖI Ở ĐÂY ---
                     <Dragger 
-                        beforeUpload={handleBeforeUpload} // <-- THÊM PROP NÀY
-                        multiple={false} // <-- THÊM PROP NÀY
-                        showUploadList={false} // <-- THÊM PROP NÀY
-                        disabled={!uploadPermissionEnabled || step > 1} // <-- Giữ nguyên
+                        // beforeUpload={handleBeforeUpload}
+                        customRequest={({file}) => setTimeout(() => handleBeforeUpload(file), 0)}
+                        multiple={false} 
+                        showUploadList={false}
+                        disabled={!uploadPermissionEnabled || step > 1} 
                         style={{ padding: '40px', background: '#f5faff', borderColor: '#1677ff' }}
                     >
                         <p className="ant-upload-drag-icon"><UploadOutlined style={{color: '#1677ff'}} /></p>
@@ -392,28 +462,52 @@ const UC39_UploadPage = () => {
                         </p>
                         <Text type="secondary" style={{fontSize: 12}}>Thiết bị: {deviceType}</Text>
                     </Dragger>
-                    // --- KẾT THÚC SỬA LỖI ---
                 )}
             </Space>
         </Card>
     );
     
-    // (Các hàm Step2, Step3, Step4 không thay đổi, giữ nguyên)
     const Step2_Processing = () => (
-        <Card title="Bước 2: Xử lý AI & Nghiệp vụ" bordered={false}>
-            {file && <FileProgress file={file} progress={uploadProgress} onRemove={handleRemoveFile} />}
-            {uploadProgress === 100 && (
-                <div style={{ marginTop: 24 }}>
-                    <ProcessingSteps steps={processingSteps} />
-                </div>
-            )}
-            {/* Hiển thị chi tiết Trùng lặp */}
+        <Card title="Bước 2: Đang xử lý tài liệu..." bordered={false}
+            style={{ position: 'relative' }}>
+            <div style={{ 
+                height: '40px', 
+                display: 'flex', 
+                justifyContent: 'center', 
+                alignItems: 'center',
+                marginBottom: '16px',
+                opacity: isProcessing ? 1 : 0, // Fade effect
+                transition: 'opacity 0.3s ease',
+                visibility: isProcessing ? 'visible' : 'hidden'
+            }}>
+                <Space style={{ 
+                    background: '#e6f7ff', 
+                    padding: '8px 24px', 
+                    borderRadius: '20px', 
+                    border: '1px solid #91d5ff',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                }}>
+                    <LoadingOutlined style={{ fontSize: 20, color: '#1890ff' }} spin />
+                    <Text strong style={{ color: '#1890ff' }}>{processingMessage}</Text>
+                </Space>
+            </div>
+
+            <div style={{ padding: '0 24px' }}>
+                <FileProgress 
+                    file={file} 
+                    progress={uploadProgress} 
+                    onRemove={() => dispatch({type: actionTypes.RESET_STATE})}
+                />
+            </div>
+
+            <div style={{ marginTop: 24 }}>
+                <ProcessingSteps steps={processingSteps} />
+            </div>
+
             {apiResponse?.duplicateError && (
                 <div style={{marginTop: 24}}>
                     <DuplicateAnalysis duplicateError={apiResponse.duplicateError} />
-                    <div style={{textAlign: 'center', marginTop: 16}}>
-                        <Button danger onClick={() => dispatch({type: actionTypes.RESET_STATE})}>Hủy & Chọn file khác</Button>
-                    </div>
+                    <Button danger block onClick={() => dispatch({type: actionTypes.RESET_STATE})} style={{marginTop: 16}}>Hủy bỏ & Chọn lại</Button>
                 </div>
             )}
         </Card>
@@ -640,7 +734,7 @@ const UC39_UploadPage = () => {
             <Steps 
                 current={step - 1} 
                 items={[
-                    { title: 'Chọn File', icon: <UploadOutlined /> },
+                    { title: 'Cấu hình & File', icon: <UploadOutlined /> },
                     { title: 'Xử lý AI', icon: <RobotOutlined /> },
                     { title: 'Review & Metadata', icon: <FileDoneOutlined /> },
                     { title: 'Kết quả & Auto-Route', icon: <SendOutlined /> },
@@ -660,10 +754,16 @@ const UC39_UploadPage = () => {
                 onOk={handleConfirmOcr}
                 onCancel={handleSkipOcr}
                 okText="Chạy OCR (Trích xuất văn bản)"
-                cancelText="Bỏ qua (Chỉ lưu file)"
+                cancelText="Bỏ qua (Lưu không text)"
+                closable={false} // Bắt buộc chọn
+                maskClosable={false}
             >
-                <p>File PDF này chỉ chứa hình ảnh (không có lớp văn bản). Bạn có muốn hệ thống chạy OCR để trích xuất nội dung phục vụ tìm kiếm không?</p>
-                <Alert message="Lưu ý: Quá trình OCR có thể mất thêm vài giây." type="info" showIcon />
+                <Alert 
+                    message="Tài liệu này là file PDF dạng ảnh (Scan)." 
+                    description="Hệ thống không tìm thấy lớp văn bản gốc. Bạn có muốn bật tính năng OCR để trích xuất nội dung phục vụ tìm kiếm không? Quá trình này có thể mất thêm thời gian."
+                    type="info" 
+                    showIcon 
+                />
             </Modal>
 
         </div>
