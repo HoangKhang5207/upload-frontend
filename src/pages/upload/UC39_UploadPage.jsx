@@ -9,8 +9,8 @@ import {
     SendOutlined,
     ClockCircleOutlined,
     UsergroupAddOutlined,
-    ScanOutlined, 
-    SafetyCertificateOutlined, 
+    ScanOutlined,
+    SafetyCertificateOutlined,
     EyeOutlined,
     FileTextOutlined,
     LoadingOutlined,
@@ -35,6 +35,7 @@ import AdvancedSettingsPanel from '../../components/dms/upload/AdvancedSettingsP
 
 // Thêm import API thực tế
 import * as uploadApi from '../../api/uploadApi';
+import UserInfoPanel from '../../components/dms/upload/UserInfoPanel';
 
 const { Title, Paragraph, Text } = Typography;
 const { Dragger } = Upload; // <-- Dùng Dragger của Antd
@@ -65,6 +66,7 @@ const UC39_UploadPage = () => {
         enableOcr: true,
         enableDuplicateCheck: true,
         enableMetadata: true,
+        enableWatermark: true, // Mặc định bật Watermark
         ocrEngine: 'tesseract', // 'tesseract' or 'easyocr'
     });
 
@@ -78,8 +80,10 @@ const UC39_UploadPage = () => {
     const [ocrPages, setOcrPages] = useState([]); // Lưu nội dung OCR theo trang
     const [showExpiryDate, setShowExpiryDate] = useState(false);
 
-    // State lưu tên danh mục để hiển thị kết quả
     const [selectedCategoryName, setSelectedCategoryName] = useState("");
+
+    // State quản lý mở/đóng Advanced Settings Panel để tránh re-render bị đóng
+    const [advancedPanelActiveKey, setAdvancedPanelActiveKey] = useState([]);
 
     // --- STATE LOADING (Điều khiển hiển thị) ---
     const [isProcessing, setIsProcessing] = useState(false);
@@ -97,15 +101,15 @@ const UC39_UploadPage = () => {
                 if (categories.length === 0) {
                     const realCategories = await uploadApi.getCategories();
                     const formattedCategories = realCategories.map(cat => ({ id: cat.id, name: cat.name }));
-                    dispatch({ 
-                        type: actionTypes.SET_INITIAL_DATA, 
-                        payload: { categories: formattedCategories, permissions: { canUpload: true } } 
+                    dispatch({
+                        type: actionTypes.SET_INITIAL_DATA,
+                        payload: { categories: formattedCategories, permissions: { canUpload: true } }
                     });
                 }
-                
+
                 // Load Users theo Department (ABAC) - Yêu cầu số 3
                 const users = await uploadApi.fetchUsersByDepartment();
-                console.log("Fetched recipient users:", users);
+                //console.log("Fetched recipient users:", users);
                 setRecipientUsers(users);
 
             } catch (error) {
@@ -120,7 +124,7 @@ const UC39_UploadPage = () => {
         else setDeviceType('desktop');
 
     }, [dispatch, categories.length, message]);
-    
+
     // Sync Metadata to Form & Handle Conditional Logic
     useEffect(() => {
         // Logic mapping: Nếu description trống, lấy từ summary của AI
@@ -141,7 +145,7 @@ const UC39_UploadPage = () => {
             const name = foundCat ? foundCat.name : (metadata.categoryName || "");
             setSelectedCategoryName(name);
         }
-        
+
         // Check conditions to show fields immediately
         checkConditionalFields(metadata);
     }, [metadata, form, categories]);
@@ -157,13 +161,13 @@ const UC39_UploadPage = () => {
     const handleCategoryChange = (value) => {
         const foundCat = categories.find(c => c.id === value);
         const catName = foundCat ? foundCat.name : "";
-        
+
         setSelectedCategoryName(catName); // Update local state cho visualization
-        
+
         // Update context
         dispatch({
-            type: actionTypes.SET_METADATA, 
-            payload: { ...metadata, category: value, categoryName: catName } 
+            type: actionTypes.SET_METADATA,
+            payload: { ...metadata, category: value, categoryName: catName }
         });
     };
 
@@ -174,37 +178,42 @@ const UC39_UploadPage = () => {
     const processFile = useCallback(async (selectedFile, forceOcr = false, overrideOptions = {}) => {
         // A. HỢP NHẤT OPTIONS (Merge Feature Flags với lựa chọn từ Modal)
         const currentOptions = { ...featureFlags, ...overrideOptions };
-        
+
         // B. CẤU HÌNH DANH SÁCH BƯỚC (STEPS CONFIG)
         // Lưu ý: Logic 'enabled' ở đây quyết định bước đó CÓ CHẠY hay không
         // Logic 'visible' (hiển thị trên UI) là luôn luôn hiển thị để user biết quy trình
         const stepsConfig = [
-            { 
-                name: 'Khử nhiễu ảnh', 
-                key: 'denoise', 
+            {
+                name: 'Khử nhiễu ảnh',
+                key: 'denoise',
                 // Chỉ chạy nếu user bật VÀ là file ảnh
-                enabled: currentOptions.enableDenoise && selectedFile.type.startsWith('image/') 
+                enabled: currentOptions.enableDenoise && selectedFile.type.startsWith('image/')
             },
-            { 
-                name: `OCR - Trích xuất văn bản`, 
-                key: 'ocr', 
+            {
+                name: 'Gắn Watermark',
+                key: 'watermark',
+                enabled: currentOptions.enableWatermark
+            },
+            {
+                name: `OCR - Trích xuất văn bản`,
+                key: 'ocr',
                 // Chạy nếu user bật HOẶC bị ép buộc (Force)
-                enabled: currentOptions.enableOcr || forceOcr 
+                enabled: currentOptions.enableOcr || forceOcr
             },
-            { 
-                name: 'Kiểm tra trùng lặp', 
-                key: 'duplicate', 
-                enabled: currentOptions.enableDuplicateCheck 
+            {
+                name: 'Kiểm tra trùng lặp',
+                key: 'duplicate',
+                enabled: currentOptions.enableDuplicateCheck
             },
-            { 
-                name: 'Gợi ý Metadata & Kiểm tra mâu thuẫn', 
-                key: 'metadata', 
-                enabled: currentOptions.enableMetadata 
+            {
+                name: 'Gợi ý Metadata & Kiểm tra mâu thuẫn',
+                key: 'metadata',
+                enabled: currentOptions.enableMetadata
             },
-            { 
-                name: 'Tổng hợp kết quả', 
-                key: 'final', 
-                enabled: true 
+            {
+                name: 'Tổng hợp kết quả',
+                key: 'final',
+                enabled: true
             }
         ];
 
@@ -249,11 +258,11 @@ const UC39_UploadPage = () => {
                 if (event.status === 'processing') {
                     // 1. Cập nhật Message Top Center
                     setProcessingMessage(event.message || `Đang xử lý: ${stepsConfig[uiIndex].name}...`);
-                    
+
                     // 2. Cập nhật Step Icon -> Loading
-                    dispatch({ 
-                        type: actionTypes.UPDATE_STEP_STATUS, 
-                        payload: { stepIndex: uiIndex, status: 'processing', description: event.message } 
+                    dispatch({
+                        type: actionTypes.UPDATE_STEP_STATUS,
+                        payload: { stepIndex: uiIndex, status: 'processing', description: event.message }
                     });
 
                     // 3. Cập nhật Progress Bar (Nhích nhẹ để user biết đang chạy)
@@ -264,7 +273,7 @@ const UC39_UploadPage = () => {
                     }
 
                     // 4. DELAY để user kịp đọc "Đang xử lý..."
-                    await wait(STEP_DELAY_MS); 
+                    await wait(STEP_DELAY_MS);
                 }
 
                 // --- GIAI ĐOẠN 2: HOÀN THÀNH XỬ LÝ (Completed/Skipped/Success) ---
@@ -276,9 +285,9 @@ const UC39_UploadPage = () => {
                     setProcessingMessage(event.message || `Hoàn tất: ${stepsConfig[uiStatus].name}`);
 
                     // 2. Cập nhật Step Icon -> Done/Check
-                    dispatch({ 
-                        type: actionTypes.UPDATE_STEP_STATUS, 
-                        payload: { stepIndex: uiIndex, status: uiStatus, description: event.message } 
+                    dispatch({
+                        type: actionTypes.UPDATE_STEP_STATUS,
+                        payload: { stepIndex: uiIndex, status: uiStatus, description: event.message }
                     });
 
                     // 3. Cập nhật Progress Bar (Full bước đó)
@@ -287,7 +296,7 @@ const UC39_UploadPage = () => {
                         // Nếu là bước cuối cùng (final) -> ép về 100%
                         let newPercent = Math.round((activeIndex + 1) * progressPerStep);
                         if (newPercent > 100) newPercent = 100; // Safety cap
-                        
+
                         dispatch({ type: actionTypes.UPDATE_PROGRESS, payload: newPercent });
                     }
 
@@ -304,24 +313,24 @@ const UC39_UploadPage = () => {
                     // Force Step Cuối cùng thành Completed
                     const finalStepIndex = stepsConfig.findIndex(s => s.key === 'final');
                     if (finalStepIndex !== -1) {
-                        dispatch({ 
-                            type: actionTypes.UPDATE_STEP_STATUS, 
-                            payload: { stepIndex: finalStepIndex, status: 'completed', description: 'Hoàn tất toàn bộ.' } 
+                        dispatch({
+                            type: actionTypes.UPDATE_STEP_STATUS,
+                            payload: { stepIndex: finalStepIndex, status: 'completed', description: 'Hoàn tất toàn bộ.' }
                         });
                     }
 
                     //Force Progress 100%
                     dispatch({ type: actionTypes.UPDATE_PROGRESS, payload: 100 });
                     setProcessingMessage("Xử lý thành công! Đang chuyển hướng...");
-                    
+
                     // Delay cuối cùng trước khi chuyển màn hình
                     await wait(8000);
 
                     const fullData = result.data;
-                    
+
                     setOcrPages(fullData.ocrPages || []);
                     dispatch({ type: actionTypes.SET_API_RESPONSE, payload: fullData });
-                    
+
                     const metaWithSummary = {
                         ...fullData.suggestedMetadata,
                         summary: fullData.suggestedMetadata?.summary || '',
@@ -369,7 +378,7 @@ const UC39_UploadPage = () => {
         // Logic mới trong processFile sẽ nhận diện override này và set bước OCR thành 'skipped' ngay từ đầu
         processFile(file, false, { enableOcr: false });
     };
-    
+
     // Tạo hàm beforeUpload cho Antd. Handler xử lý file (từ Dragger)
     const handleBeforeUpload = (selectedFile) => {
         if (selectedFile.size > 50 * 1024 * 1024) {
@@ -392,7 +401,7 @@ const UC39_UploadPage = () => {
     const handleFinalize = async () => {
         try {
             const values = await form.validateFields();
-            
+
             dispatch({ type: actionTypes.SET_STEP, payload: 4 });
             const loadingKey = 'finalize';
             message.loading({ content: 'Đang lưu trữ, nhúng watermark và kích hoạt Định tuyến...', key: loadingKey, duration: 0 });
@@ -417,7 +426,7 @@ const UC39_UploadPage = () => {
             const result = await uploadApi.finalizeUpload(file, finalMetadata);
             dispatch({ type: actionTypes.SET_UPLOAD_RESULT, payload: result });
             message.success({ content: 'Tải lên và xử lý hoàn tất!', key: loadingKey });
-        
+
         } catch (errInfo) {
             console.log('Validate Failed:', errInfo);
             notification.error({
@@ -427,63 +436,82 @@ const UC39_UploadPage = () => {
         }
     };
 
+
+
+    // ... (existing imports, but this replace will handle the user info panel import if I put it at top, but to be safe I will just use the panel in the component)
+
     const Step1_SelectFile = () => (
-        <Card title="Bước 1: Chọn tài liệu" bordered={false} style={{boxShadow: '0 2px 8px rgba(0,0,0,0.1)'}}>
-            <Space direction="vertical" style={{width: '100%'}} size="middle">
-                {/* Feature Toggles UI */}
-                <AdvancedSettingsPanel featureFlags={featureFlags} setFeatureFlags={setFeatureFlags} />
+        <Card title="Bước 1: Chọn tài liệu" bordered={false} style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+            <Row gutter={24}>
+                {/* Cột Trái: Upload & Cấu hình */}
+                <Col xs={24} lg={16}>
+                    <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                        {/* Feature Toggles UI */}
+                        <AdvancedSettingsPanel
+                            featureFlags={featureFlags}
+                            setFeatureFlags={setFeatureFlags}
+                            activeKey={advancedPanelActiveKey}
+                            onChange={setAdvancedPanelActiveKey}
+                        />
 
-                <Row justify="center">
-                    <Col>
-                        <Text strong>Quyền Upload</Text>
-                        <Switch checked={uploadPermissionEnabled} onChange={setUploadPermissionEnabled} style={{marginLeft: 8}} checkedChildren="Có quyền" unCheckedChildren="Không" />
-                    </Col>
-                </Row>
+                        <Row justify="center">
+                            <Col>
+                                <Text strong>Quyền Upload (Giả lập)</Text>
+                                <Switch checked={uploadPermissionEnabled} onChange={setUploadPermissionEnabled} style={{ marginLeft: 8 }} checkedChildren="Có quyền" unCheckedChildren="Không" />
+                            </Col>
+                        </Row>
 
-                {!uploadPermissionEnabled ? (
-                    <Result
-                        status="403"
-                        title="Truy Cập Bị Từ Chối (403)"
-                        subTitle="Bạn không có quyền `documents:upload`. Vui lòng liên hệ quản trị viên."
-                    />
-                ) : (
-                    <Dragger 
-                        // beforeUpload={handleBeforeUpload}
-                        customRequest={({file}) => setTimeout(() => handleBeforeUpload(file), 0)}
-                        multiple={false} 
-                        showUploadList={false}
-                        disabled={!uploadPermissionEnabled || step > 1} 
-                        style={{ padding: '40px', background: '#f5faff', borderColor: '#1677ff' }}
-                    >
-                        <p className="ant-upload-drag-icon"><UploadOutlined style={{color: '#1677ff'}} /></p>
-                        <p className="ant-upload-text">Kéo thả file hoặc nhấn để chọn</p>
-                        <p className="ant-upload-hint">
-                            Hỗ trợ: PDF, DOCX, JPG, PNG, MP4, MP3... (Tối đa 50MB)
-                        </p>
-                        <Text type="secondary" style={{fontSize: 12}}>Thiết bị: {deviceType}</Text>
-                    </Dragger>
-                )}
-            </Space>
+                        {!uploadPermissionEnabled ? (
+                            <Result
+                                status="403"
+                                title="Truy Cập Bị Từ Chối (403)"
+                                subTitle="Bạn không có quyền `documents:upload`. Vui lòng liên hệ quản trị viên."
+                            />
+                        ) : (
+                            <Dragger
+                                // beforeUpload={handleBeforeUpload}
+                                customRequest={({ file }) => setTimeout(() => handleBeforeUpload(file), 0)}
+                                multiple={false}
+                                showUploadList={false}
+                                disabled={!uploadPermissionEnabled || step > 1}
+                                style={{ padding: '40px', background: '#f5faff', borderColor: '#1677ff' }}
+                            >
+                                <p className="ant-upload-drag-icon"><UploadOutlined style={{ color: '#1677ff' }} /></p>
+                                <p className="ant-upload-text">Kéo thả file hoặc nhấn để chọn</p>
+                                <p className="ant-upload-hint">
+                                    Hỗ trợ: PDF, DOCX, JPG, PNG, MP4, MP3... (Tối đa 50MB)
+                                </p>
+                                <Text type="secondary" style={{ fontSize: 12 }}>Thiết bị: {deviceType}</Text>
+                            </Dragger>
+                        )}
+                    </Space>
+                </Col>
+
+                {/* Cột Phải: Thông tin người dùng */}
+                <Col xs={24} lg={8}>
+                    <UserInfoPanel />
+                </Col>
+            </Row>
         </Card>
     );
-    
+
     const Step2_Processing = () => (
         <Card title="Bước 2: Đang xử lý tài liệu..." bordered={false}
             style={{ position: 'relative' }}>
-            <div style={{ 
-                height: '40px', 
-                display: 'flex', 
-                justifyContent: 'center', 
+            <div style={{
+                height: '40px',
+                display: 'flex',
+                justifyContent: 'center',
                 alignItems: 'center',
                 marginBottom: '16px',
                 opacity: isProcessing ? 1 : 0, // Fade effect
                 transition: 'opacity 0.3s ease',
                 visibility: isProcessing ? 'visible' : 'hidden'
             }}>
-                <Space style={{ 
-                    background: '#e6f7ff', 
-                    padding: '8px 24px', 
-                    borderRadius: '20px', 
+                <Space style={{
+                    background: '#e6f7ff',
+                    padding: '8px 24px',
+                    borderRadius: '20px',
                     border: '1px solid #91d5ff',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
                 }}>
@@ -493,10 +521,10 @@ const UC39_UploadPage = () => {
             </div>
 
             <div style={{ padding: '0 24px' }}>
-                <FileProgress 
-                    file={file} 
-                    progress={uploadProgress} 
-                    onRemove={() => dispatch({type: actionTypes.RESET_STATE})}
+                <FileProgress
+                    file={file}
+                    progress={uploadProgress}
+                    onRemove={() => dispatch({ type: actionTypes.RESET_STATE })}
                 />
             </div>
 
@@ -505,45 +533,45 @@ const UC39_UploadPage = () => {
             </div>
 
             {apiResponse?.duplicateError && (
-                <div style={{marginTop: 24}}>
+                <div style={{ marginTop: 24 }}>
                     <DuplicateAnalysis duplicateError={apiResponse.duplicateError} />
-                    <Button danger block onClick={() => dispatch({type: actionTypes.RESET_STATE})} style={{marginTop: 16}}>Hủy bỏ & Chọn lại</Button>
+                    <Button danger block onClick={() => dispatch({ type: actionTypes.RESET_STATE })} style={{ marginTop: 16 }}>Hủy bỏ & Chọn lại</Button>
                 </div>
             )}
         </Card>
     );
-    
+
     const Step3_Review = () => (
         <Card>
-            <Title level={4} style={{marginTop: 0, borderBottom: '1px solid #f0f0f0', paddingBottom: 16}}>
+            <Title level={4} style={{ marginTop: 0, borderBottom: '1px solid #f0f0f0', paddingBottom: 16 }}>
                 Bước 3: Xem lại, Chỉnh sửa & Hoàn tất
             </Title>
-            <Form form={form} layout="vertical" onValuesChange={(changed, all) => dispatch({type: actionTypes.SET_METADATA, payload: {...metadata, ...all}})}>
+            <Form form={form} layout="vertical" onValuesChange={(changed, all) => dispatch({ type: actionTypes.SET_METADATA, payload: { ...metadata, ...all } })}>
                 <Row gutter={24}>
                     {/* --- Cột trái: Form để người dùng tương tác --- */}
                     <Col xs={24} lg={13}>
                         <Card type="inner" title="Thông tin Metadata (AI Gợi ý)">
-                            <Form.Item label="Tên tài liệu" name="title" rules={[{required: true, message: 'Vui lòng nhập tên tài liệu'}]}>
-                                <Input prefix={<FileTextOutlined />} placeholder="Nhập tên tài liệu"/>
+                            <Form.Item label="Tên tài liệu" name="title" rules={[{ required: true, message: 'Vui lòng nhập tên tài liệu' }]}>
+                                <Input prefix={<FileTextOutlined />} placeholder="Nhập tên tài liệu" />
                             </Form.Item>
-                            
-                            <Form.Item 
-                                label="Danh mục (Auto-Route)" 
-                                name="category" 
-                                rules={[{required: true, message: 'Vui lòng chọn danh mục'}]}
+
+                            <Form.Item
+                                label="Danh mục (Auto-Route)"
+                                name="category"
+                                rules={[{ required: true, message: 'Vui lòng chọn danh mục' }]}
                                 help={metadata.category ? <Text type="success">AI đã chọn danh mục này dựa trên nội dung.</Text> : "Chọn danh mục để kích hoạt quy trình."}
                             >
-                                <Select 
-                                    placeholder="Chọn danh mục" 
-                                    optionFilterProp="children" 
-                                    showSearch 
+                                <Select
+                                    placeholder="Chọn danh mục"
+                                    optionFilterProp="children"
+                                    showSearch
                                     allowClear
                                     onChange={handleCategoryChange} // Gắn handler custom
                                 >
                                     {categories.map(c => <Option key={c.id} value={c.id}>{c.name}</Option>)}
                                 </Select>
                             </Form.Item>
-                            
+
                             <Form.Item label="Tags" name="tags">
                                 <Input prefix={<RobotOutlined />} placeholder="tag1, tag2..." />
                             </Form.Item>
@@ -571,9 +599,9 @@ const UC39_UploadPage = () => {
 
                             {/* Trường có điều kiện: Expiry Date */}
                             {showExpiryDate && (
-                                <Form.Item 
-                                    label="Ngày hết hạn (Bắt buộc cho LOCKED/Public)" 
-                                    name="expiryDate" 
+                                <Form.Item
+                                    label="Ngày hết hạn (Bắt buộc cho LOCKED/Public)"
+                                    name="expiryDate"
                                     rules={[{ required: true, message: 'Vui lòng chọn ngày hết hạn' }]}
                                     style={{ background: '#fff1f0', padding: 10, borderRadius: 6 }}
                                 >
@@ -582,8 +610,8 @@ const UC39_UploadPage = () => {
                             )}
 
                             {/* Trường: Người nhận (Auto-route/Notify) */}
-                            <Form.Item 
-                                label={<span><UsergroupAddOutlined /> Người nhận</span>} 
+                            <Form.Item
+                                label={<span><UsergroupAddOutlined /> Người nhận</span>}
                                 name="recipients"
                             >
                                 <Select
@@ -594,8 +622,8 @@ const UC39_UploadPage = () => {
                                 >
                                     {recipientUsers.map(u => (
                                         <Option key={u.id} value={u.id} label={u.name}>
-                                            <div style={{display: 'flex', justifyContent: 'space-between'}}>
-                                                <span>{u.name} <Text type="secondary" style={{fontSize: 11}}>({u.email})</Text></span>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <span>{u.name} <Text type="secondary" style={{ fontSize: 11 }}>({u.email})</Text></span>
                                                 <Tag color={u.role === 'Manager' ? 'gold' : 'blue'}>{u.department}</Tag>
                                             </div>
                                         </Option>
@@ -611,29 +639,50 @@ const UC39_UploadPage = () => {
 
                     {/* --- Cột phải: Hiển thị chi tiết kết quả xử lý --- */}
                     <Col xs={24} lg={11}>
-                        <Space direction="vertical" style={{width: '100%'}} size="middle">
-                            {/* 1. OCR Viewer (Quan trọng nhất - Để trên cùng) */}
-                            <Card 
-                                title={<span><ScanOutlined /> Nội dung trích xuất</span>}
-                                size="small"
-                                bodyStyle={{ padding: 0 }}
-                                extra={<Tag color="blue">{ocrPages.length} trang</Tag>}
-                            >
-                                <OcrPagedViewer pages={ocrPages} />
-                            </Card>
+                        <Tabs defaultActiveKey="preview" type="card">
+                            <Tabs.TabPane tab={<span><EyeOutlined /> Xem trước (Watermarked)</span>} key="preview">
+                                <Card
+                                    size="small"
+                                    bodyStyle={{ padding: 0, height: '500px' }}
+                                >
+                                    {apiResponse?.previewUrl ? (
+                                        <iframe
+                                            src={`http://localhost:8000/file/preview-temp/${apiResponse.previewUrl.split('/').pop()}`}
+                                            style={{ width: '100%', height: '100%', border: 'none' }}
+                                            title="Watermark Preview"
+                                        />
+                                    ) : (
+                                        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#8c8c8c' }}>
+                                            <CloseCircleOutlined style={{ fontSize: 32, marginBottom: 8 }} />
+                                            <p>Không có bản xem trước</p>
+                                        </div>
+                                    )}
+                                </Card>
+                            </Tabs.TabPane>
 
-                            {/* 2. Kết quả phân tích (Warnings, Conflicts...) */}
-                            <ProcessingResultDetails apiResponse={apiResponse} />
-                        
-                            <div style={{ marginTop: 16, textAlign: 'center' }}>
-                                <Alert 
-                                    message="Lưu ý về Auto-Route"
-                                    description="Sau khi nhấn 'Hoàn tất', hệ thống sẽ tự động quét Danh mục và Tags để kích hoạt quy trình BPMN phù hợp."
-                                    type="info" 
-                                    showIcon 
-                                />
-                            </div>
-                        </Space>
+                            <Tabs.TabPane tab={<span><ScanOutlined /> Nội dung OCR ({ocrPages.length} trang)</span>} key="ocr">
+                                <Card
+                                    size="small"
+                                    bodyStyle={{ padding: 0 }}
+                                    bordered={false}
+                                >
+                                    <OcrPagedViewer pages={ocrPages} />
+                                </Card>
+                            </Tabs.TabPane>
+
+                            <Tabs.TabPane tab={<span><InfoCircleOutlined /> Kết quả phân tích</span>} key="analysis">
+                                <ProcessingResultDetails apiResponse={apiResponse} />
+                            </Tabs.TabPane>
+                        </Tabs>
+
+                        <div style={{ marginTop: 16, textAlign: 'center' }}>
+                            <Alert
+                                message="Lưu ý về Auto-Route"
+                                description="Sau khi nhấn 'Hoàn tất', hệ thống sẽ tự động quét Danh mục và Tags để kích hoạt quy trình BPMN phù hợp."
+                                type="info"
+                                showIcon
+                            />
+                        </div>
                     </Col>
                 </Row>
                 <Divider />
@@ -650,7 +699,7 @@ const UC39_UploadPage = () => {
     );
 
     const Step4_Result = () => {
-        if (!uploadResult) { 
+        if (!uploadResult) {
             return (
                 <Card style={{ textAlign: 'center' }}>
                     <Spin tip="Đang lưu trữ và hoàn tất..." size="large" />
@@ -699,10 +748,10 @@ const UC39_UploadPage = () => {
                         </Descriptions.Item>
                         <Descriptions.Item label="Xem trước">
                             {/* Link xem file đã nhúng watermark */}
-                            <Button 
-                                type="link" 
-                                icon={<EyeOutlined />} 
-                                href={`http://localhost:8000${document.file_url}`} 
+                            <Button
+                                type="link"
+                                icon={<EyeOutlined />}
+                                href={`http://localhost:8000/file/preview-temp/${document.file_url.split('/').pop()}`}
                                 target="_blank"
                             >
                                 Mở file (Đã Watermark)
@@ -711,9 +760,9 @@ const UC39_UploadPage = () => {
                     </Descriptions>
 
                     {/* Visualizing Auto-Route */}
-                    <AutoRouteVisualization 
-                        routeInfo={autoRouteInfo} 
-                        docInfo={{ category_name: metadata.categoryName, tags_json: metadata.tags }} 
+                    <AutoRouteVisualization
+                        routeInfo={autoRouteInfo}
+                        docInfo={{ category_name: metadata.categoryName, tags_json: metadata.tags }}
                     />
                 </div>
             </Result>
@@ -731,8 +780,8 @@ const UC39_UploadPage = () => {
                 </Paragraph>
             </div>
 
-            <Steps 
-                current={step - 1} 
+            <Steps
+                current={step - 1}
                 items={[
                     { title: 'Cấu hình & File', icon: <UploadOutlined /> },
                     { title: 'Xử lý AI', icon: <RobotOutlined /> },
@@ -741,7 +790,7 @@ const UC39_UploadPage = () => {
                 ]}
                 style={{ marginBottom: 40 }}
             />
-            
+
             {step === 1 && <Step1_SelectFile />}
             {step === 2 && <Step2_Processing />}
             {step === 3 && <Step3_Review />}
@@ -758,11 +807,11 @@ const UC39_UploadPage = () => {
                 closable={false} // Bắt buộc chọn
                 maskClosable={false}
             >
-                <Alert 
-                    message="Tài liệu này là file PDF dạng ảnh (Scan)." 
+                <Alert
+                    message="Tài liệu này là file PDF dạng ảnh (Scan)."
                     description="Hệ thống không tìm thấy lớp văn bản gốc. Bạn có muốn bật tính năng OCR để trích xuất nội dung phục vụ tìm kiếm không? Quá trình này có thể mất thêm thời gian."
-                    type="info" 
-                    showIcon 
+                    type="info"
+                    showIcon
                 />
             </Modal>
 

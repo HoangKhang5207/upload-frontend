@@ -61,7 +61,7 @@ const useCases = [
         description: 'Mô phỏng truy cập một tài liệu yêu cầu người dùng trả phí để có thể xem nội dung.',
     },
     {
-        path: '/workflow-dashboard',
+        path: '/workflows',
         icon: <SyncOutlined style={{ fontSize: '24px' }} />,
         title: 'Quản lý Workflow',
         description: 'Quản lý các quy trình xử lý tài liệu và workflow. Bao gồm: danh sách workflow, thiết kế workflow, khởi tạo quy trình và theo dõi tiến trình.',

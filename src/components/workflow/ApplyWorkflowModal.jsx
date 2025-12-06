@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Tabs, Checkbox, Button, Spin, message, Divider, Typography } from 'antd';
-import * as mockWorkflowApi from '../../api/mockWorkflowApi';
+import { getDepartments, getDocumentCategories, assignDepartments, assignWorkflowElements, deployWorkflow } from '../../api/workflowApi';
 
 const { TabPane } = Tabs;
 const { Text } = Typography;
@@ -31,11 +31,11 @@ const ApplyWorkflowModal = ({ open, workflow, onClose, onSuccess }) => {
         setLoading(true);
         try {
           // Fetch departments
-          const deptData = await mockWorkflowApi.getDepartments();
+          const deptData = await getDepartments();
           setDepartments(deptData);
           
           // Fetch document categories
-          const categoryData = await mockWorkflowApi.getDocumentCategories();
+          const categoryData = await getDocumentCategories();
           setDocumentCategories(categoryData);
           
           // Set initial values from workflow
@@ -130,10 +130,10 @@ const ApplyWorkflowModal = ({ open, workflow, onClose, onSuccess }) => {
     setSaving(true);
     try {
       // Apply departments
-      await mockWorkflowApi.assignDepartments(workflow.id, selectedDepartments);
+      await assignDepartments(workflow.id, selectedDepartments);
       
       // Apply workflow elements (categories, urgency, security)
-      await mockWorkflowApi.assignWorkflowElements(workflow.id, {
+      await assignWorkflowElements(workflow.id, {
         categoryIds: selectedCategories,
         urgency: selectedUrgency,
         security: selectedSecurity
@@ -162,15 +162,15 @@ const ApplyWorkflowModal = ({ open, workflow, onClose, onSuccess }) => {
     setSaving(true);
     try {
       // Apply departments and elements first
-      await mockWorkflowApi.assignDepartments(workflow.id, selectedDepartments);
-      await mockWorkflowApi.assignWorkflowElements(workflow.id, {
+      await assignDepartments(workflow.id, selectedDepartments);
+      await assignWorkflowElements(workflow.id, {
         categoryIds: selectedCategories,
         urgency: selectedUrgency,
         security: selectedSecurity
       });
       
       // Deploy the workflow
-      await mockWorkflowApi.deployWorkflow(workflow.id);
+      await deployWorkflow(workflow.id);
       
       message.success('Triển khai workflow thành công!');
       onSuccess();

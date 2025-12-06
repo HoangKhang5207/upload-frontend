@@ -9,16 +9,19 @@ import {
 } from 'bpmn-js-properties-panel';
 // Descriptor cần thiết để Modeler hiểu các thuộc tính của Camunda 7
 import camundaModdleDescriptor from 'camunda-bpmn-moddle/resources/camunda.json';
+// Import Custom Properties Provider
+import customPropertiesProviderModule from '../../bpmn-custom/provider';
 
 import 'bpmn-js/dist/assets/diagram-js.css';
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn.css';
 import '@bpmn-io/properties-panel/dist/assets/properties-panel.css';
 
-import { Button, Input, Spin, message, Typography, Switch, Form } from 'antd';
+import { Button, Input, Spin, Typography, Switch, Form, App } from 'antd';
 import { SaveOutlined, ArrowLeftOutlined } from '@ant-design/icons';
-import * as mockWorkflowApi from '../../api/mockWorkflowApi';
+import * as workflowApi from '../../api/workflowApi';
+import { saveBpmn } from '../../api/bpmnApi';
 import WorkflowNavigation from '../../components/workflow/WorkflowNavigation';
-import { useWorkflow } from '../../contexts/WorkflowContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 // XML template cho một sơ đồ BPMN trống
 const newDiagramXML = `<?xml version="1.0" encoding="UTF-8"?>
@@ -44,11 +47,13 @@ const BpmnModelerPage = () => {
     const propertiesPanelRef = useRef(null);
     const [modeler, setModeler] = useState(null);
 
-    const { state, dispatch } = useWorkflow();
+    const { user } = useAuth(); // Get user info including organization
+    const [workflows, setWorkflows] = useState([]);
     const [diagramName, setDiagramName] = useState('');
     const [loading, setLoading] = useState(true); // Luôn loading ban đầu
     const [saving, setSaving] = useState(false);
     const [isPublished, setIsPublished] = useState(false);
+    const { message } = App.useApp(); // Sử dụng App context để tránh warning
 
     // useEffect 1: Chỉ để khởi tạo và hủy Modeler. Chạy một lần duy nhất.
     useEffect(() => {
@@ -62,7 +67,8 @@ const BpmnModelerPage = () => {
             },
             additionalModules: [
                 BpmnPropertiesPanelModule,
-                BpmnPropertiesProviderModule
+                BpmnPropertiesProviderModule,
+                customPropertiesProviderModule // Thêm custom provider
             ],
             moddleExtensions: {
                 camunda: camundaModdleDescriptor
@@ -99,11 +105,11 @@ const BpmnModelerPage = () => {
 
                 if (isEditMode) {
                     // Load existing workflow data
-                    const workflow = await mockWorkflowApi.getWorkflowById(id);
+                    const workflow = await workflowApi.getWorkflowById(id);
                     if (workflow) {
                         setDiagramName(workflow.name);
                         setIsPublished(workflow.status === 'published');
-                        
+
                         // Load the BPMN diagram if available
                         if (workflow.bpmnXml) {
                             await modeler.importXML(workflow.bpmnXml);
@@ -119,19 +125,25 @@ const BpmnModelerPage = () => {
             } catch (error) {
                 console.error("Failed to load diagram:", error);
                 message.error('Không thể tải dữ liệu sơ đồ.');
-                navigate('/workflow-list'); // Quay về danh sách nếu có lỗi
+                navigate('/bpmn'); // Quay về danh sách nếu có lỗi
             } finally {
                 setLoading(false);
             }
         };
 
         loadDiagram();
-    }, [id, modeler, isEditMode, navigate]); // <-- Phụ thuộc vào modeler instance
+    }, [id, modeler, isEditMode, navigate, message]); // <-- Phụ thuộc vào modeler instance
 
     const handleSave = async () => {
         if (!modeler) return;
         if (!diagramName.trim()) {
             message.warning('Vui lòng nhập tên cho sơ đồ.');
+            return;
+        }
+
+        // Check if user has organization_id
+        if (!user || !user.organization_id) {
+            message.error('Không tìm thấy thông tin tổ chức. Vui lòng đăng nhập lại.');
             return;
         }
 
@@ -142,33 +154,19 @@ const BpmnModelerPage = () => {
             const { svg } = await modeler.saveSVG();
             if (!xml || !svg) { throw new Error("Could not save BPMN/SVG data."); }
 
-            const workflowData = {
-                name: diagramName,
-                description: 'Mô tả quy trình xử lý tài liệu',
-                documentType: '1',
-                version: '1.0',
-                status: isPublished ? 'published' : 'draft',
-                bpmnXml: xml
-            };
+            // Chuẩn bị FormData cho BE
+            const formData = new FormData();
+            formData.append('name', diagramName);
+            formData.append('bpmnUploadId', isEditMode ? id : '');
+            formData.append('file', new Blob([xml], { type: 'application/xml' }), `${diagramName}.bpmn`);
+            formData.append('svgFile', new Blob([svg], { type: 'image/svg+xml' }), `${diagramName}.svg`);
+            formData.append('isPublished', isPublished);
 
-            if (isEditMode) {
-                // Update existing workflow
-                const updatedWorkflow = await mockWorkflowApi.updateWorkflow(id, workflowData);
-                // Update the workflow in the context
-                const updatedWorkflows = state.workflows.map(w => 
-                    w.id === parseInt(id) ? updatedWorkflow : w
-                );
-                dispatch({ type: 'SET_WORKFLOWS', payload: updatedWorkflows });
-            } else {
-                // Create new workflow
-                const newWorkflow = await mockWorkflowApi.createWorkflow(workflowData);
-                // Add the new workflow to the context
-                const updatedWorkflows = [...state.workflows, newWorkflow];
-                dispatch({ type: 'SET_WORKFLOWS', payload: updatedWorkflows });
-            }
-            
+            // Call saveBpmn with correct parameter order: (organizationId, formData)
+            await saveBpmn(user.organization_id, formData);
+
             message.success(`Đã lưu thành công sơ đồ "${diagramName}"!`);
-            navigate('/workflow-list');
+            navigate('/bpmn');
         } catch (error) {
             message.error('Đã xảy ra lỗi khi lưu sơ đồ.');
             console.error('Save BPMN error:', error);
@@ -184,7 +182,7 @@ const BpmnModelerPage = () => {
                 <div style={{ background: '#fff', padding: '24px', borderBottom: '1px solid #f0f0f0' }}>
                     <Button
                         type="default"
-                        onClick={() => navigate('/workflow-list')}
+                        onClick={() => navigate('/bpmn')}
                         style={{ marginRight: 16, marginBottom: 16 }}>
                         <ArrowLeftOutlined /> Quay về
                     </Button>

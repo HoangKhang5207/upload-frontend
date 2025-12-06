@@ -25,44 +25,53 @@ import {
   App, // Import App để dùng notification
   Popconfirm // Dùng Popconfirm cho an toàn
 } from 'antd';
-import * as mockWorkflowApi from '../../api/mockWorkflowApi';
+import { getWorkflows, deployWorkflow, deleteWorkflow } from '../../api/workflowApi';
 import WorkflowNavigation from '../../components/workflow/WorkflowNavigation';
-import { useWorkflow } from '../../contexts/WorkflowContext';
 import WorkflowLoading from '../../components/workflow/WorkflowLoading';
 import WorkflowEmptyState from '../../components/workflow/WorkflowEmptyState';
 import ApplyWorkflowModal from '../../components/workflow/ApplyWorkflowModal';
+import DeployWorkflowModal from '../../components/workflow/DeployWorkflowModal';
+import { useAuth } from '../../contexts/AuthContext'; // Import AuthContext
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
 const WorkflowListPage = () => {
-  const { state, dispatch } = useWorkflow();
+  const { user } = useAuth(); // Get user info including organization
   const navigate = useNavigate();
-  const { workflows, loading } = state;
+  const [workflows, setWorkflows] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [selectedWorkflow, setSelectedWorkflow] = useState(null);
+  const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
 
   // Lấy API notification từ Antd App Context
   const { notification } = App.useApp();
 
   useEffect(() => {
     const fetchWorkflows = async () => {
-      dispatch({ type: 'SET_LOADING', payload: true });
+      if (!user?.organization_id) {
+        console.error('No organization ID found in user info');
+        return;
+      }
+
+      setLoading(true);
       try {
-        const data = await mockWorkflowApi.getWorkflows();
-        dispatch({ type: 'SET_WORKFLOWS', payload: data });
+        const data = await getWorkflows(user.organization_id);
+        setWorkflows(data);
       } catch (error) {
         console.error('Error fetching workflows:', error);
-        dispatch({ type: 'SET_ERROR', payload: 'Có lỗi xảy ra khi tải danh sách quy trình' });
       } finally {
-        dispatch({ type: 'SET_LOADING', payload: false });
+        setLoading(false);
       }
     };
 
-    fetchWorkflows();
-  }, [dispatch]);
+    if (user) {
+      fetchWorkflows();
+    }
+  }, [user]);
 
   const handleDelete = async (workflow) => {
     if (workflow.isDeployed) {
@@ -75,9 +84,9 @@ const WorkflowListPage = () => {
     }
     
     try {
-      await mockWorkflowApi.deleteWorkflow(workflow.id);
+      await deleteWorkflow(workflow.id);
       const updatedWorkflows = workflows.filter(w => w.id !== workflow.id);
-      dispatch({ type: 'SET_WORKFLOWS', payload: updatedWorkflows });
+      setWorkflows(updatedWorkflows);
       
       // THAY THẾ DISPATCH BẰNG NOTIFICATION CỦA ANTD
       notification.success({
@@ -104,12 +113,16 @@ const WorkflowListPage = () => {
     setIsApplyModalOpen(true);
   };
 
+  const handleDeployNewWorkflow = () => {
+    setIsDeployModalOpen(true);
+  };
+
   const handleDeployWorkflow = async (workflow) => {
     try {
-      await mockWorkflowApi.deployWorkflow(workflow.id);
+      await deployWorkflow(workflow.id);
       // Refresh workflows
-      const updatedWorkflows = await mockWorkflowApi.getWorkflows();
-      dispatch({ type: 'SET_WORKFLOWS', payload: updatedWorkflows });
+      const updatedWorkflows = await getWorkflows(user.organization_id);
+      setWorkflows(updatedWorkflows);
       
       // THAY THẾ DISPATCH BẰNG NOTIFICATION CỦA ANTD
       notification.success({
@@ -156,11 +169,10 @@ const WorkflowListPage = () => {
     // Refresh workflows after successful action
     const fetchWorkflows = async () => {
       try {
-        const data = await mockWorkflowApi.getWorkflows();
-        dispatch({ type: 'SET_WORKFLOWS', payload: data });
+        const data = await getWorkflows(user.organization_id);
+        setWorkflows(data);
       } catch (error) {
         console.error('Error fetching workflows:', error);
-        dispatch({ type: 'SET_ERROR', payload: 'Có lỗi xảy ra khi tải danh sách quy trình' });
       }
     };
     
@@ -273,11 +285,9 @@ const WorkflowListPage = () => {
           <Title level={3} style={{ margin: 0 }}>Danh sách Workflow</Title>
           <Text type="secondary">Quản lý các sơ đồ quy trình xử lý tài liệu</Text>
         </div>
-        <Link to="/bpmn-modeler">
-          <Button type="primary" icon={<PlusOutlined />} size="large">
-            Tạo mới
+        <Button type="primary" icon={<PlusOutlined />} size="large" onClick={handleDeployNewWorkflow}>
+            Triển khai quy trình
           </Button>
-        </Link>
       </div>
 
       {/* Filters */}
@@ -314,8 +324,8 @@ const WorkflowListPage = () => {
         <WorkflowEmptyState 
           title="Không tìm thấy workflow nào" 
           description="Không có workflow nào phù hợp với tiêu chí tìm kiếm." 
-          actionText="Tạo workflow mới" 
-          actionLink="/bpmn-modeler" 
+          actionText="Triển khai quy trình" 
+          onAction={handleDeployNewWorkflow}
         />
       )}
       
@@ -325,6 +335,14 @@ const WorkflowListPage = () => {
         onClose={() => {
           setIsApplyModalOpen(false);
           setSelectedWorkflow(null);
+        }}
+        onSuccess={handleActionSuccess}
+      />
+      
+      <DeployWorkflowModal
+        open={isDeployModalOpen}
+        onClose={() => {
+          setIsDeployModalOpen(false);
         }}
         onSuccess={handleActionSuccess}
       />

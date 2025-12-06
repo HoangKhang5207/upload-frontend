@@ -11,29 +11,9 @@ import {
 
 const navigationItems = [
   {
-    key: '/workflow-dashboard',
-    label: <Link to="/workflow-dashboard">Bảng điều khiển</Link>,
-    icon: <DashboardOutlined />,
-  },
-  {
-    key: '/workflow-list',
-    label: <Link to="/workflow-list">Danh sách Workflow</Link>,
+    key: '/workflow',
+    label: <Link to="/workflow">Danh sách Workflow</Link>,
     icon: <UnorderedListOutlined />,
-  },
-  {
-    key: '/bpmn-modeler',
-    label: <Link to="/bpmn-modeler">Thiết kế Workflow</Link>,
-    icon: <EditOutlined />,
-  },
-  {
-    key: '/start-workflow/1', // Key gốc
-    label: <Link to="/start-workflow/1">Khởi tạo quy trình</Link>,
-    icon: <PlayCircleOutlined />,
-  },
-  {
-    key: '/workflow-documentation',
-    label: <Link to="/workflow-documentation">Tài liệu hướng dẫn</Link>,
-    icon: <BookOutlined />,
   },
 ];
 
@@ -42,13 +22,9 @@ const WorkflowNavigation = () => {
   const [current, setCurrent] = useState(location.pathname);
 
   useEffect(() => {
-    // Logic tìm key active (giống như MainLayout)
-    if (location.pathname.startsWith('/start-workflow')) {
-      setCurrent('/start-workflow/1');
-    } else if (location.pathname.startsWith('/bpmn-modeler')) {
-      setCurrent('/bpmn-modeler');
-    } else if (location.pathname.startsWith('/workflow-detail') || location.pathname === '/workflow-list') {
-      setCurrent('/workflow-list');
+    // Logic tìm key active
+    if (location.pathname === '/workflow') {
+      setCurrent('/workflow');
     } else {
       setCurrent(location.pathname);
     }

@@ -7,7 +7,8 @@ const WorkflowEmptyState = ({
   title = "Không có dữ liệu", 
   description = "Hiện tại không có dữ liệu để hiển thị.", 
   actionText = "Tạo mới", 
-  actionLink = "/bpmn-modeler" 
+  actionLink,
+  onAction 
 }) => {
   return (
     <Empty
@@ -20,11 +21,17 @@ const WorkflowEmptyState = ({
       }
       style={{ padding: '48px 0' }}
     >
-      <Link to={actionLink}>
-        <Button type="primary" icon={<PlusOutlined />}>
+      {actionLink ? (
+        <Link to={actionLink}>
+          <Button type="primary" icon={<PlusOutlined />}>
+            {actionText}
+          </Button>
+        </Link>
+      ) : (
+        <Button type="primary" icon={<PlusOutlined />} onClick={onAction}>
           {actionText}
         </Button>
-      </Link>
+      )}
     </Empty>
   );
 };
