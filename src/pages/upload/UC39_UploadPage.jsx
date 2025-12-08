@@ -17,7 +17,8 @@ import {
     SettingOutlined,
     InfoCircleOutlined,
     FolderOpenOutlined,
-    WarningOutlined, BugOutlined
+    WarningOutlined, BugOutlined,
+    CloseCircleOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 

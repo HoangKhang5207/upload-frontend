@@ -11,6 +11,11 @@ import {
     StopOutlined
 } from '@ant-design/icons';
 
+// Import các component mới
+import WatermarkPreview from './WatermarkPreview';
+import OcrContent from './OcrContent';
+import AnalysisResult from './AnalysisResult';
+
 const { Text, Title, Paragraph } = Typography;
 const { Panel } = Collapse;
 
@@ -23,42 +28,14 @@ const ProcessingResultDetails = ({ apiResponse }) => {
         <Space direction="vertical" style={{ width: '100%' }} size="large">
             <Title level={4}>Chi tiết Kết quả Xử lý</Title>
             
-            {/* 1. Kết quả Khử nhiễu ảnh (AI) */}
-            {denoiseInfo && (
-                <Card title="Khử nhiễu ảnh (AI)" size="small" headStyle={{backgroundColor: '#fafafa'}}>
-                    {denoiseInfo.denoised ? (
-                        <Alert
-                            message={denoiseInfo.message}
-                            description={<Text code>Model: {denoiseInfo.modelUsed}</Text>}
-                            type="success"
-                            showIcon
-                            icon={<ExperimentOutlined />}
-                        />
-                    ) : (
-                        <Alert
-                            message={denoiseInfo.message}
-                            type="info"
-                            showIcon
-                        />
-                    )}
-                </Card>
-            )}
+            {/* Phần 1: Xem trước Watermark */}
+            <WatermarkPreview watermarkInfo={watermarkInfo} />
 
-            {/* 2. Gợi ý & Trích xuất Key-Values */}
-            <Card title="Gợi ý & Trích xuất Key-Values" size="small" headStyle={{backgroundColor: '#fafafa'}}>
-                 <Text type="secondary">Các cặp Key-Value được nhận dạng:</Text>
-                <pre style={{ 
-                    backgroundColor: '#282c34', 
-                    color: '#abb2bf', 
-                    padding: '12px', 
-                    borderRadius: '4px', 
-                    marginTop: 8, 
-                    maxHeight: 150, 
-                    overflowY: 'auto' 
-                }}>
-                    {JSON.stringify(suggestedMetadata?.key_values || { "Info": "Không trích xuất được Key-Values." }, null, 2)}
-                </pre>
-            </Card>
+            {/* Phần 2: Nội dung OCR */}
+            <OcrContent denoiseInfo={denoiseInfo} />
+
+            {/* Phần 3: Kết quả phân tích */}
+            <AnalysisResult suggestedMetadata={suggestedMetadata?.key_values || suggestedMetadata} />
             
             {/* 3. Kết quả Kiểm tra mâu thuẫn dữ liệu */}
             {conflicts && conflicts.length > 0 && (
@@ -95,18 +72,6 @@ const ProcessingResultDetails = ({ apiResponse }) => {
                         />
                     </Panel>
                 </Collapse>
-            )}
-
-             {/* 5. Kết quả Nhúng watermark bảo vệ */}
-            {watermarkInfo && (
-                <Card title="Nhúng Watermark bảo vệ" size="small" headStyle={{backgroundColor: '#fafafa'}}>
-                     <Alert
-                        message={watermarkInfo.message}
-                        type="success"
-                        showIcon
-                        icon={<SafetyCertificateOutlined />}
-                    />
-                </Card>
             )}
         </Space>
     );
