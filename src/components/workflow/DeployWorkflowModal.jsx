@@ -55,7 +55,7 @@ const DeployWorkflowModal = ({ open, onClose, onSuccess }) => {
         
         if (bpmn.pathSvg) {
           // Fetch SVG content
-          const response = await fetch(`http://localhost:8080${bpmn.pathSvg}`, {
+          const response = await fetch(`http://localhost:8081${bpmn.pathSvg}`, {
             credentials: 'include'
           });
           if (response.ok) {
