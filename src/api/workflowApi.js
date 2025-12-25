@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Base URL for API requests
-const API_BASE_URL = 'http://localhost:8081/api/v1';
+const API_BASE_URL = 'http://localhost:8098/api/v1';
 
 // Create axios instance with base URL and common headers
 const apiClient = axios.create({

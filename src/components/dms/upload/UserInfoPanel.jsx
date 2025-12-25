@@ -23,11 +23,11 @@ const UserInfoPanel = () => {
     }
 
     // Fallback display if specific fields aren't populated yet (e.g., waiting for backend update)
-    const displayName = user.full_name || `${user.last_name || ''} ${user.first_name || ''}`.trim() || user.email;
-    const deptName = user.department_name || (user.department_id ? `Department ID: ${user.department_id}` : 'Chưa cập nhật');
-    const positionName = user.position_name || 'Chưa cập nhật';
-    const roles = user.roles || [];
-    const permissions = user.permissions || [];
+    const displayName = user.fullName || `${user.lastName || ''} ${user.firstName || ''}`.trim() || user.email;
+    const deptName = user.departmentName || (user.departmentId ? `Department ID: ${user.departmentId}` : 'Chưa cập nhật');
+    const positionName = user.positionName || 'Chưa cập nhật';
+    const roles = user.roleNames || [];
+    const permissions = user.permissionNames || [];
 
     return (
         <Card

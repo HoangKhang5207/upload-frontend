@@ -80,6 +80,7 @@ const UC39_UploadPage = () => {
     const [isOcrModalVisible, setIsOcrModalVisible] = useState(false); // Modal confirm OCR
     const [ocrPages, setOcrPages] = useState([]); // Lưu nội dung OCR theo trang
     const [showExpiryDate, setShowExpiryDate] = useState(false);
+    const [originalFile, setOriginalFile] = useState(null);
 
     const [selectedCategoryName, setSelectedCategoryName] = useState("");
 
@@ -386,6 +387,9 @@ const UC39_UploadPage = () => {
             message.error("Lỗi: Kích thước file vượt quá 50MB.");
             return Upload.LIST_IGNORE;
         }
+
+        setOriginalFile(selectedFile);
+
         dispatch({ type: actionTypes.UPDATE_PROGRESS, payload: 0 });
         dispatch({ type: actionTypes.SET_FILE, payload: selectedFile });
         dispatch({ type: actionTypes.SET_STEP, payload: 2 });
@@ -660,6 +664,19 @@ const UC39_UploadPage = () => {
                                     )}
                                 </Card>
                             </Tabs.TabPane>
+
+                            {/* THÊM TAB MỚI: KHỬ NHIỄU Ảnh/PDF Scan */}
+                            {/* <Tabs.TabPane 
+                                tab={<span><ExperimentOutlined /> Khử nhiễu Ảnh/PDF Scan</span>} 
+                                key="denoise"
+                            >
+                                <Card size="small" bordered={false} bodyStyle={{ padding: '0 12px' }}>
+                                    <DenoiseViewer 
+                                        denoiseInfo={apiResponse?.denoiseInfo} 
+                                        originalFile={originalFile} 
+                                    />
+                                </Card>
+                            </Tabs.TabPane> */}
 
                             <Tabs.TabPane tab={<span><ScanOutlined /> Nội dung OCR ({ocrPages.length} trang)</span>} key="ocr">
                                 <Card
