@@ -18,7 +18,8 @@ import {
     InfoCircleOutlined,
     FolderOpenOutlined,
     WarningOutlined, BugOutlined,
-    CloseCircleOutlined
+    CloseCircleOutlined,
+    ExperimentOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
@@ -33,6 +34,7 @@ import OcrPagedViewer from '../../components/dms/upload/OcrPagedViewer';
 import AutoRouteVisualization from '../../components/dms/upload/AutoRouteVisualization';
 import DuplicateAnalysis from '../../components/dms/upload/DuplicateAnalysis';
 import AdvancedSettingsPanel from '../../components/dms/upload/AdvancedSettingsPanel';
+import DenoiseViewer from '../../components/dms/upload/DenoiseViewer';
 
 // Thêm import API thực tế
 import * as uploadApi from '../../api/uploadApi';
@@ -666,17 +668,17 @@ const UC39_UploadPage = () => {
                             </Tabs.TabPane>
 
                             {/* THÊM TAB MỚI: KHỬ NHIỄU Ảnh/PDF Scan */}
-                            {/* <Tabs.TabPane 
-                                tab={<span><ExperimentOutlined /> Khử nhiễu Ảnh/PDF Scan</span>} 
+                            <Tabs.TabPane
+                                tab={<span><ExperimentOutlined /> Khử nhiễu Ảnh/PDF Scan</span>}
                                 key="denoise"
                             >
                                 <Card size="small" bordered={false} bodyStyle={{ padding: '0 12px' }}>
-                                    <DenoiseViewer 
-                                        denoiseInfo={apiResponse?.denoiseInfo} 
-                                        originalFile={originalFile} 
+                                    <DenoiseViewer
+                                        denoiseInfo={apiResponse?.denoiseInfo}
+                                        originalFile={originalFile}
                                     />
                                 </Card>
-                            </Tabs.TabPane> */}
+                            </Tabs.TabPane>
 
                             <Tabs.TabPane tab={<span><ScanOutlined /> Nội dung OCR ({ocrPages.length} trang)</span>} key="ocr">
                                 <Card
