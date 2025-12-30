@@ -84,6 +84,10 @@ const UC39_UploadPage = () => {
 
     const [selectedCategoryName, setSelectedCategoryName] = useState("");
 
+    // --- STATE MỚI CHO LOGIC XỬ LÝ TRÙNG LẶP ---
+    const [duplicateModalVisible, setDuplicateModalVisible] = useState(false);
+    const [duplicateData, setDuplicateData] = useState(null); // Lưu data để resume
+
     // State quản lý mở/đóng Advanced Settings Panel để tránh re-render bị đóng
     const [advancedPanelActiveKey, setAdvancedPanelActiveKey] = useState([]);
 
@@ -91,7 +95,7 @@ const UC39_UploadPage = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [processingMessage, setProcessingMessage] = useState("Đang khởi tạo...");
 
-    const { message, notification } = App.useApp();
+    const { message, notification, modal } = App.useApp();
     const [form] = Form.useForm();
 
     // --- Effects ---
@@ -173,13 +177,59 @@ const UC39_UploadPage = () => {
         });
     };
 
+    // --- XỬ LÝ LỖI CHUNG (Helper) ---
+    const handleErrorUI = (error, title = "Lỗi xử lý") => {
+        console.error("Upload Error:", error);
+        
+        // Check lỗi 403 (Forbidden) - Backend trả về
+        if (error.status === 403 || error.code === 'FORBIDDEN') {
+            Modal.error({
+                title: 'Từ chối truy cập (403)',
+                content: (
+                    <div>
+                        <p style={{ color: 'red', fontWeight: 'bold' }}>Bạn không có quyền thực hiện hành động này.</p>
+                        <p>Chi tiết: {error.message}</p>
+                        <p style={{ fontSize: '12px', color: '#888' }}>
+                            Vui lòng kiểm tra lại quyền hạn, phòng ban hoặc liên hệ Admin.
+                        </p>
+                    </div>
+                ),
+                okText: 'Đã hiểu',
+            });
+        } 
+        // Check lỗi 401 (Unauthorized) - Token hết hạn
+        else if (error.status === 401 || error.code === 'UNAUTHORIZED') {
+            notification.error({
+                message: 'Phiên làm việc hết hạn',
+                description: 'Vui lòng đăng nhập lại để tiếp tục.',
+            });
+            // Tùy chọn: Redirect login logic ở đây
+
+        } 
+        // Lỗi khác
+        else {
+            notification.error({
+                message: title,
+                description: error.message || 'Đã xảy ra lỗi không xác định.',
+            });
+        }
+    };
+
     // --- UTILS: SLEEP FUNCTION ---
     const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
     // --- STREAM PROCESSING LOGIC ---
-    const processFile = useCallback(async (selectedFile, forceOcr = false, overrideOptions = {}) => {
+    const processFile = useCallback(async (selectedFile, forceOcr = false, overrideOptions = {}, manualData = null) => {
         // A. HỢP NHẤT OPTIONS (Merge Feature Flags với lựa chọn từ Modal)
-        const currentOptions = { ...featureFlags, ...overrideOptions };
+        // Nếu có manualData (tức là đang Resume), ta tự động tắt các bước đã làm rồi
+        const isResuming = !!manualData;
+        const currentOptions = { 
+            ...featureFlags, 
+            ...overrideOptions,
+            // Nếu đang resume, tắt Denoise và OCR để Backend dùng data gửi lên
+            enableDenoise: isResuming ? false : (featureFlags.enableDenoise || overrideOptions.enableDenoise),
+            enableOcr: isResuming ? false : (featureFlags.enableOcr || overrideOptions.enableOcr) 
+        };
 
         // B. CẤU HÌNH DANH SÁCH BƯỚC (STEPS CONFIG)
         // Lưu ý: Logic 'enabled' ở đây quyết định bước đó CÓ CHẠY hay không
@@ -242,7 +292,18 @@ const UC39_UploadPage = () => {
 
         try {
             // E. GỌI API STREAMING VỚI CALLBACK XỬ LÝ SỰ KIỆN
-            const result = await uploadApi.processUploadStream(selectedFile, { ...currentOptions, forceOcr }, async (event) => {
+            // Chuẩn bị payload params
+            const params = { 
+                ...currentOptions, 
+                forceOcr,
+                // Truyền dữ liệu cũ lên nếu có
+                manual_ocr_content: manualData?.ocrContent || null,
+                manual_ocr_pages: manualData?.ocrPages ? JSON.stringify(manualData.ocrPages) : null,
+                manual_total_pages: manualData?.totalPages || null,
+                manual_denoise_info: manualData?.denoiseInfo ? JSON.stringify(manualData.denoiseInfo) : null
+            };
+
+            const result = await uploadApi.processUploadStream(selectedFile, params, async (event) => {
                 console.log("Stream Event:", event);
 
                 // Bỏ qua event system/error để xử lý ở block catch/result check
@@ -352,7 +413,13 @@ const UC39_UploadPage = () => {
                 } else if (result.status === 'warning' && result.code === 'SCANNED_PDF') {
                     setIsOcrModalVisible(true);
                 } else if (result.status === 'error' && result.code === 'DUPLICATE_FOUND') {
+                    // THAY ĐỔI: Không chỉ notify, mà hiện Modal xác nhận
+                    // Lưu dữ liệu tạm để dùng nếu user chọn "Tiếp tục"
+                    setDuplicateData(result.data); 
+                    setDuplicateModalVisible(true);
+
                     notification.warning({ message: 'Cảnh báo trùng lặp', description: result.message });
+
                     dispatch({ type: actionTypes.SET_API_RESPONSE, payload: { ...apiResponse, duplicateError: result.data } });
                 } else {
                     throw new Error(result.message || "Lỗi không xác định");
@@ -361,12 +428,12 @@ const UC39_UploadPage = () => {
         } catch (error) {
             console.error(error);
             setProcessingMessage("Xảy ra lỗi!");
-            notification.error({ message: 'Lỗi xử lý', description: error.message });
+            handleErrorUI(error, "Lỗi phân tích tài liệu");
             dispatch({ type: actionTypes.RESET_STATE });
         } finally {
             setIsProcessing(false);
         }
-    }, [dispatch, featureFlags, apiResponse, notification]);
+    }, [featureFlags, dispatch, notification, apiResponse, handleErrorUI]);
 
     // Handler khi User xác nhận chạy OCR cho PDF Scan
     const handleConfirmOcr = () => {
@@ -379,6 +446,24 @@ const UC39_UploadPage = () => {
         // Gọi lại processFile nhưng với overrideOptions tắt OCR
         // Logic mới trong processFile sẽ nhận diện override này và set bước OCR thành 'skipped' ngay từ đầu
         processFile(file, false, { enableOcr: false });
+    };
+
+    // --- HANDLER CHO MODAL TRÙNG LẶP ---
+    const handleDuplicateContinue = () => {
+        // User chọn "Tiếp tục xử lý"
+        setDuplicateModalVisible(false);
+        
+        // Gọi lại quy trình nhưng:
+        // 1. Tắt check trùng lặp (enableDuplicateCheck: false)
+        // 2. Truyền dữ liệu OCR/Denoise cũ vào (duplicateData)
+        processFile(file, false, { enableDuplicateCheck: false }, duplicateData);
+    };
+
+    const handleDuplicateCancel = () => {
+        // User chọn "Dừng lại"
+        setDuplicateModalVisible(false);
+        setDuplicateData(null);
+        dispatch({ type: actionTypes.RESET_STATE }); // Reset về màn hình chọn file
     };
 
     // Tạo hàm beforeUpload cho Antd. Handler xử lý file (từ Dragger)
@@ -433,11 +518,21 @@ const UC39_UploadPage = () => {
             message.success({ content: 'Tải lên và xử lý hoàn tất!', key: loadingKey });
 
         } catch (errInfo) {
-            console.log('Validate Failed:', errInfo);
-            notification.error({
-                message: 'Thông tin không hợp lệ',
-                description: 'Vui lòng kiểm tra lại các trường thông tin bắt buộc.'
-            });
+            // Nếu lỗi từ validateFields (Form Antd)
+            if (errInfo.errorFields) {
+                notification.error({
+                    message: 'Thông tin không hợp lệ',
+                    description: 'Vui lòng kiểm tra lại các trường thông tin bắt buộc.'
+                });
+                return;
+            }
+
+            // Nếu lỗi từ API (403, 500...)
+            // Quay lại bước 3 để user sửa lại (ví dụ hạ mức độ mật xuống)
+            dispatch({ type: actionTypes.SET_STEP, payload: 3 }); 
+            message.destroy('finalize'); // Tắt loading
+            
+            handleErrorUI(errInfo, "Lỗi lưu trữ tài liệu");
         }
     };
 
@@ -537,12 +632,48 @@ const UC39_UploadPage = () => {
                 <ProcessingSteps steps={processingSteps} />
             </div>
 
-            {apiResponse?.duplicateError && (
+            {/* {apiResponse?.duplicateError && (
                 <div style={{ marginTop: 24 }}>
                     <DuplicateAnalysis duplicateError={apiResponse.duplicateError} />
                     <Button danger block onClick={() => dispatch({ type: actionTypes.RESET_STATE })} style={{ marginTop: 16 }}>Hủy bỏ & Chọn lại</Button>
                 </div>
-            )}
+            )} */}
+
+            {/* MODAL XÁC NHẬN TRÙNG LẶP (MỚI) */}
+            <Modal
+                title={<span><WarningOutlined style={{ color: '#faad14' }} /> Xác nhận trùng lặp tài liệu</span>}
+                open={duplicateModalVisible}
+                onOk={handleDuplicateContinue}
+                onCancel={handleDuplicateCancel}
+                footer={[
+                    <Button key="cancel" danger onClick={handleDuplicateCancel}>
+                        Dừng lại & Chọn file khác
+                    </Button>,
+                    <Button key="continue" type="primary" onClick={handleDuplicateContinue}>
+                        Tiếp tục xử lý (Bỏ qua trùng lặp)
+                    </Button>,
+                ]}
+                closable={false}
+                maskClosable={false}
+                width={800}
+            >
+                {/* Sử dụng DuplicateAnalysis component */}
+                <DuplicateAnalysis duplicateError={duplicateData} />
+
+                <Divider style={{ margin: '16px 0' }} />
+
+                <Alert
+                    message="Bạn có muốn tiếp tục xử lý không?"
+                    description={
+                        <ul style={{ fontSize: '13px', color: '#666', marginTop: 8, marginBottom: 0 }}>
+                            <li>Nếu chọn <b>Tiếp tục</b>: Hệ thống sẽ giữ lại kết quả trước đó đã chạy và chuyển sang bước Gợi ý Metadata.</li>
+                            <li>Nếu chọn <b>Dừng lại</b>: Quy trình sẽ hủy bỏ, bạn có thể tải lên file khác.</li>
+                        </ul>
+                    }
+                    type="warning"
+                    showIcon
+                />
+            </Modal>
         </Card>
     );
 
@@ -652,7 +783,7 @@ const UC39_UploadPage = () => {
                                 >
                                     {apiResponse?.previewUrl ? (
                                         <iframe
-                                            src={`http://localhost:8000/file/preview-temp/${apiResponse.previewUrl.split('/').pop()}`}
+                                            src={`${import.meta.env.VITE_FILE_SERVICE_URL}/preview-temp/${apiResponse.previewUrl.split('/').pop()}`}
                                             style={{ width: '100%', height: '100%', border: 'none' }}
                                             title="Watermark Preview"
                                         />
@@ -666,7 +797,7 @@ const UC39_UploadPage = () => {
                             </Tabs.TabPane>
 
                             {/* THÊM TAB MỚI: KHỬ NHIỄU Ảnh/PDF Scan */}
-                            {/* <Tabs.TabPane 
+                            <Tabs.TabPane 
                                 tab={<span><ExperimentOutlined /> Khử nhiễu Ảnh/PDF Scan</span>} 
                                 key="denoise"
                             >
@@ -676,7 +807,7 @@ const UC39_UploadPage = () => {
                                         originalFile={originalFile} 
                                     />
                                 </Card>
-                            </Tabs.TabPane> */}
+                            </Tabs.TabPane>
 
                             <Tabs.TabPane tab={<span><ScanOutlined /> Nội dung OCR ({ocrPages.length} trang)</span>} key="ocr">
                                 <Card
@@ -764,8 +895,7 @@ const UC39_UploadPage = () => {
                                 <Tag color="success">Đã nhúng</Tag>
                             </Space>
                         </Descriptions.Item>
-                        <Descriptions.Item label="Xem trước">
-                            {/* Link xem file đã nhúng watermark */}
+                        {/* <Descriptions.Item label="Xem trước">
                             <Button
                                 type="link"
                                 icon={<EyeOutlined />}
@@ -774,7 +904,7 @@ const UC39_UploadPage = () => {
                             >
                                 Mở file (Đã Watermark)
                             </Button>
-                        </Descriptions.Item>
+                        </Descriptions.Item> */}
                     </Descriptions>
 
                     {/* Visualizing Auto-Route */}

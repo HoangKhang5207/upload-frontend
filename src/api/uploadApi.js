@@ -1,4 +1,40 @@
-const API_BASE_URL = 'http://localhost:8000/api/document'; // Cập nhật đúng prefix router Backend
+const API_BASE_URL = import.meta.env.VITE_FILE_SERVICE_URL; // Cập nhật đúng prefix router Backend
+
+/**
+ * Helper: Lấy Header Authentication chuẩn
+ * Lưu ý: Với FormData, KHÔNG set 'Content-Type', browser sẽ tự set boundary.
+ */
+const getAuthHeaders = () => {
+    const token = sessionStorage.getItem('access_token');
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+};
+
+/**
+ * Helper: Xử lý lỗi HTTP response chuẩn Production
+ */
+const handleHttpError = async (response) => {
+    let errorMessage = `HTTP Error ${response.status}`;
+    let errorData = {};
+    
+    try {
+        errorData = await response.json();
+        // Ưu tiên lấy message từ detail (FastAPI standard) hoặc message
+        errorMessage = errorData.detail || errorData.message || errorMessage;
+    } catch (e) {
+        // Fallback nếu response không phải JSON
+        console.error("Error parsing error response JSON:", e);
+    }
+
+    const error = new Error(errorMessage);
+    error.status = response.status;
+    error.data = errorData; // Gắn data để UI có thể đọc code lỗi (VD: code='SCANNED_PDF')
+    
+    // Đặc biệt: Đánh dấu lỗi Auth để UI xử lý logout/redirect nếu cần
+    if (response.status === 401) error.code = 'UNAUTHORIZED';
+    if (response.status === 403) error.code = 'FORBIDDEN';
+
+    throw error;
+};
 
 /**
  * Gọi API /process_upload với Streaming Response
@@ -20,13 +56,23 @@ export const processUploadStream = async (file, options, onProgress) => {
     formData.append('ocr_engine', options.ocrEngine); // 'tesseract' or 'easyocr'
     formData.append('force_ocr', options.forceOcr || false);
 
+    // Append params resume nếu có
+    if (options.manual_ocr_content) formData.append('manual_ocr_content', options.manual_ocr_content);
+    if (options.manual_ocr_pages) formData.append('manual_ocr_pages', options.manual_ocr_pages);
+    if (options.manual_total_pages) formData.append('manual_total_pages', options.manual_total_pages);
+    if (options.manual_denoise_info) formData.append('manual_denoise_info', options.manual_denoise_info);
+
+    const headers = getAuthHeaders();
+    // Lưu ý: Không set 'Content-Type' ở đây khi dùng FormData
+
     const response = await fetch(`${API_BASE_URL}/process_upload`, {
         method: 'POST',
+        headers: headers, // Inject Token
         body: formData,
     });
 
     if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        await handleHttpError(response); // Ném lỗi 401/403/500 ngay tại đây
     }
 
     const reader = response.body.getReader();
@@ -87,7 +133,8 @@ export const processUploadStream = async (file, options, onProgress) => {
 
             } catch (e) {
                 console.error("Error parsing stream JSON:", e);
-                // Có thể throw tiếp hoặc nuốt lỗi tùy chiến lược, ở đây log ra console
+                // Nếu lỗi do throw Error phía trên thì throw tiếp
+                if (e.message) throw e;
             }
         }
     }
@@ -161,31 +208,52 @@ export const finalizeUpload = async (file, metadata) => {
     if (metadata.key_values) formData.append('key_values_json', JSON.stringify(metadata.key_values));
     if (metadata.summary) formData.append('summary', metadata.summary);
 
+    const headers = getAuthHeaders();
+
     const response = await fetch(`${API_BASE_URL}/insert`, {
         method: 'POST',
+        headers: headers,
         body: formData,
     });
 
     if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        await handleHttpError(response);
     }
     return await response.json();
 };
 
 // Thêm API lấy danh mục thật
 export const getCategories = async () => {
-    const response = await fetch(`${API_BASE_URL}/categories`);
-    if (!response.ok) throw new Error("Failed to fetch categories");
+    const headers = getAuthHeaders();
+    // Thêm Content-Type json cho GET request
+    headers['Content-Type'] = 'application/json';
+
+    const response = await fetch(`${API_BASE_URL}/categories`, {
+        method: 'GET',
+        headers: headers
+    });
+
+    if (!response.ok) await handleHttpError(response);
     const res = await response.json();
-    return res.data; // Trả về mảng [{id, name}, ...]
+    return res.data;
 };
 
 // API lấy User
 export const fetchUsersByDepartment = async () => {
     try {
-        // Gọi endpoint /users/suggestion đã thêm ở Backend
-        const response = await fetch(`${API_BASE_URL}/users/suggestion`);
+        const headers = getAuthHeaders();
+        headers['Content-Type'] = 'application/json';
+        
+        const response = await fetch(`${API_BASE_URL}/users/suggestion`, {
+            method: 'GET',
+            headers: headers
+        });
+        
+        if (!response.ok) {
+            // Log warning thôi, không chặn flow chính nếu không load được user gợi ý
+            console.warn("Could not fetch user suggestions:", response.statusText);
+            return [];
+        }
         const res = await response.json();
         return res.data || [];
     } catch (e) {
