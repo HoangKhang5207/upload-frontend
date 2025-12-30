@@ -18,7 +18,8 @@ import {
     InfoCircleOutlined,
     FolderOpenOutlined,
     WarningOutlined, BugOutlined,
-    CloseCircleOutlined
+    CloseCircleOutlined,
+    ExperimentOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
@@ -33,6 +34,7 @@ import OcrPagedViewer from '../../components/dms/upload/OcrPagedViewer';
 import AutoRouteVisualization from '../../components/dms/upload/AutoRouteVisualization';
 import DuplicateAnalysis from '../../components/dms/upload/DuplicateAnalysis';
 import AdvancedSettingsPanel from '../../components/dms/upload/AdvancedSettingsPanel';
+import DenoiseViewer from '../../components/dms/upload/DenoiseViewer';
 
 // Thêm import API thực tế
 import * as uploadApi from '../../api/uploadApi';
@@ -180,7 +182,7 @@ const UC39_UploadPage = () => {
     // --- XỬ LÝ LỖI CHUNG (Helper) ---
     const handleErrorUI = (error, title = "Lỗi xử lý") => {
         console.error("Upload Error:", error);
-        
+
         // Check lỗi 403 (Forbidden) - Backend trả về
         if (error.status === 403 || error.code === 'FORBIDDEN') {
             Modal.error({
@@ -196,7 +198,7 @@ const UC39_UploadPage = () => {
                 ),
                 okText: 'Đã hiểu',
             });
-        } 
+        }
         // Check lỗi 401 (Unauthorized) - Token hết hạn
         else if (error.status === 401 || error.code === 'UNAUTHORIZED') {
             notification.error({
@@ -205,7 +207,7 @@ const UC39_UploadPage = () => {
             });
             // Tùy chọn: Redirect login logic ở đây
 
-        } 
+        }
         // Lỗi khác
         else {
             notification.error({
@@ -223,12 +225,12 @@ const UC39_UploadPage = () => {
         // A. HỢP NHẤT OPTIONS (Merge Feature Flags với lựa chọn từ Modal)
         // Nếu có manualData (tức là đang Resume), ta tự động tắt các bước đã làm rồi
         const isResuming = !!manualData;
-        const currentOptions = { 
-            ...featureFlags, 
+        const currentOptions = {
+            ...featureFlags,
             ...overrideOptions,
             // Nếu đang resume, tắt Denoise và OCR để Backend dùng data gửi lên
             enableDenoise: isResuming ? false : (featureFlags.enableDenoise || overrideOptions.enableDenoise),
-            enableOcr: isResuming ? false : (featureFlags.enableOcr || overrideOptions.enableOcr) 
+            enableOcr: isResuming ? false : (featureFlags.enableOcr || overrideOptions.enableOcr)
         };
 
         // B. CẤU HÌNH DANH SÁCH BƯỚC (STEPS CONFIG)
@@ -293,8 +295,8 @@ const UC39_UploadPage = () => {
         try {
             // E. GỌI API STREAMING VỚI CALLBACK XỬ LÝ SỰ KIỆN
             // Chuẩn bị payload params
-            const params = { 
-                ...currentOptions, 
+            const params = {
+                ...currentOptions,
                 forceOcr,
                 // Truyền dữ liệu cũ lên nếu có
                 manual_ocr_content: manualData?.ocrContent || null,
@@ -415,7 +417,7 @@ const UC39_UploadPage = () => {
                 } else if (result.status === 'error' && result.code === 'DUPLICATE_FOUND') {
                     // THAY ĐỔI: Không chỉ notify, mà hiện Modal xác nhận
                     // Lưu dữ liệu tạm để dùng nếu user chọn "Tiếp tục"
-                    setDuplicateData(result.data); 
+                    setDuplicateData(result.data);
                     setDuplicateModalVisible(true);
 
                     notification.warning({ message: 'Cảnh báo trùng lặp', description: result.message });
@@ -452,7 +454,7 @@ const UC39_UploadPage = () => {
     const handleDuplicateContinue = () => {
         // User chọn "Tiếp tục xử lý"
         setDuplicateModalVisible(false);
-        
+
         // Gọi lại quy trình nhưng:
         // 1. Tắt check trùng lặp (enableDuplicateCheck: false)
         // 2. Truyền dữ liệu OCR/Denoise cũ vào (duplicateData)
@@ -529,9 +531,9 @@ const UC39_UploadPage = () => {
 
             // Nếu lỗi từ API (403, 500...)
             // Quay lại bước 3 để user sửa lại (ví dụ hạ mức độ mật xuống)
-            dispatch({ type: actionTypes.SET_STEP, payload: 3 }); 
+            dispatch({ type: actionTypes.SET_STEP, payload: 3 });
             message.destroy('finalize'); // Tắt loading
-            
+
             handleErrorUI(errInfo, "Lỗi lưu trữ tài liệu");
         }
     };
@@ -783,7 +785,7 @@ const UC39_UploadPage = () => {
                                 >
                                     {apiResponse?.previewUrl ? (
                                         <iframe
-                                            src={`${import.meta.env.VITE_FILE_SERVICE_URL}/preview-temp/${apiResponse.previewUrl.split('/').pop()}`}
+                                            src={`${import.meta.env.VITE_FILE_SERVICE_URL}/preview-temp/${apiResponse.previewUrl.split('/').pop()}?token=${sessionStorage.getItem('access_token')}`}
                                             style={{ width: '100%', height: '100%', border: 'none' }}
                                             title="Watermark Preview"
                                         />
@@ -797,14 +799,14 @@ const UC39_UploadPage = () => {
                             </Tabs.TabPane>
 
                             {/* THÊM TAB MỚI: KHỬ NHIỄU Ảnh/PDF Scan */}
-                            <Tabs.TabPane 
-                                tab={<span><ExperimentOutlined /> Khử nhiễu Ảnh/PDF Scan</span>} 
+                            <Tabs.TabPane
+                                tab={<span><ExperimentOutlined /> Khử nhiễu Ảnh/PDF Scan</span>}
                                 key="denoise"
                             >
                                 <Card size="small" bordered={false} bodyStyle={{ padding: '0 12px' }}>
-                                    <DenoiseViewer 
-                                        denoiseInfo={apiResponse?.denoiseInfo} 
-                                        originalFile={originalFile} 
+                                    <DenoiseViewer
+                                        denoiseInfo={apiResponse?.denoiseInfo}
+                                        originalFile={originalFile}
                                     />
                                 </Card>
                             </Tabs.TabPane>

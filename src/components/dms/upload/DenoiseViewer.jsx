@@ -1,22 +1,22 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-    Carousel, 
-    Button, 
-    Card, 
-    Image, 
-    Space, 
-    Typography, 
-    Tag, 
-    Row, 
-    Col, 
+import {
+    Carousel,
+    Button,
+    Card,
+    Image,
+    Space,
+    Typography,
+    Tag,
+    Row,
+    Col,
     Empty,
     Tooltip
 } from 'antd';
-import { 
-    DownloadOutlined, 
-    LeftOutlined, 
-    RightOutlined, 
-    FilePdfOutlined, 
+import {
+    DownloadOutlined,
+    LeftOutlined,
+    RightOutlined,
+    FilePdfOutlined,
     FileImageOutlined,
     ZoomInOutlined
 } from '@ant-design/icons';
@@ -50,7 +50,7 @@ const DenoiseViewer = ({ denoiseInfo, originalFile }) => {
     // denoiseInfo thường có dạng: { downloadUrl: "...", denoised: true, modelUsed: "...", ... }
     // API Backend trả về đường dẫn tương đối, cần ghép với Base URL của API
     const API_BASE_URL = import.meta.env.VITE_FILE_SERVICE_URL || 'http://localhost:8000/api/v1/file';
-    
+
     // Parse tên file từ downloadUrl cũ để dùng cho endpoint mới
     // Giả sử downloadUrl backend trả về dạng: /static/denoised_results/filename.pdf
     const denoisedFileName = useMemo(() => {
@@ -61,13 +61,15 @@ const DenoiseViewer = ({ denoiseInfo, originalFile }) => {
     // Tạo URL hiển thị (Preview - Inline)
     const denoisedPreviewUrl = useMemo(() => {
         if (!denoisedFileName) return null;
-        return `${API_BASE_URL}/preview-temp/${denoisedFileName}`;
+        const token = sessionStorage.getItem('access_token');
+        return `${API_BASE_URL}/preview-temp/${denoisedFileName}?token=${token}`;
     }, [denoisedFileName, API_BASE_URL]);
 
     // Tạo URL tải về (Download - Attachment)
     const realDownloadUrl = useMemo(() => {
         if (!denoisedFileName) return null;
-        return `${API_BASE_URL}/download-temp/${denoisedFileName}`;
+        const token = sessionStorage.getItem('access_token');
+        return `${API_BASE_URL}/download-temp/${denoisedFileName}?token=${token}`;
     }, [denoisedFileName, API_BASE_URL]);
 
     // Xác định loại file (dựa trên file gốc hoặc extension)
@@ -86,10 +88,10 @@ const DenoiseViewer = ({ denoiseInfo, originalFile }) => {
                     </Tag>
                 </div>
 
-                <div style={{ 
-                    height: '450px', 
-                    background: '#f0f2f5', 
-                    borderRadius: '8px', 
+                <div style={{
+                    height: '450px',
+                    background: '#f0f2f5',
+                    borderRadius: '8px',
                     overflow: 'hidden',
                     border: '1px solid #d9d9d9',
                     display: 'flex',
@@ -98,17 +100,17 @@ const DenoiseViewer = ({ denoiseInfo, originalFile }) => {
                 }}>
                     {isPdf ? (
                         // Logic hiển thị PDF: Dùng iframe để browser tự render
-                        <iframe 
+                        <iframe
                             src={`${url}#toolbar=0&view=FitH`} // Tắt toolbar PDF mặc định của browser cho gọn
                             title={label}
-                            width="100%" 
-                            height="100%" 
-                            style={{ border: 'none' }} 
+                            width="100%"
+                            height="100%"
+                            style={{ border: 'none' }}
                         />
                     ) : (
                         // Logic hiển thị Ảnh: Dùng Antd Image để có tính năng Zoom xịn
-                        <Image 
-                            src={url} 
+                        <Image
+                            src={url}
                             alt={label}
                             style={{ objectFit: 'contain', maxHeight: '450px' }}
                             height="100%"
@@ -135,7 +137,7 @@ const DenoiseViewer = ({ denoiseInfo, originalFile }) => {
         } else {
             // Tải file từ Server (Force Download Endpoint)
             // Mở link này sẽ kích hoạt header attachment từ backend
-            window.location.href = realDownloadUrl; 
+            window.location.href = realDownloadUrl;
         }
     };
 
@@ -159,8 +161,8 @@ const DenoiseViewer = ({ denoiseInfo, originalFile }) => {
             </Row>
 
             {/* Carousel Content */}
-            <Carousel 
-                arrows 
+            <Carousel
+                arrows
                 prevArrow={<LeftOutlined style={{ fontSize: 24, color: '#1890ff', fontWeight: 'bold' }} />}
                 nextArrow={<RightOutlined style={{ fontSize: 24, color: '#1890ff', fontWeight: 'bold' }} />}
                 dots={{ className: 'custom-dots' }}
@@ -188,9 +190,9 @@ const DenoiseViewer = ({ denoiseInfo, originalFile }) => {
                         </Text>
                     </div>
 
-                    <Button 
-                        type="primary" 
-                        icon={<DownloadOutlined />} 
+                    <Button
+                        type="primary"
+                        icon={<DownloadOutlined />}
                         size="large"
                         onClick={handleDownload}
                         style={{ minWidth: 200 }}
@@ -199,7 +201,7 @@ const DenoiseViewer = ({ denoiseInfo, originalFile }) => {
                     </Button>
                 </Space>
             </div>
-            
+
             {/* CSS Styles cho Carousel Arrows (Inline hoặc đưa vào file css riêng) */}
             <style jsx="true">{`
                 .ant-carousel .slick-prev,
