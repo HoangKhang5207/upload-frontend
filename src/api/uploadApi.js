@@ -15,7 +15,7 @@ const getAuthHeaders = () => {
 const handleHttpError = async (response) => {
     let errorMessage = `HTTP Error ${response.status}`;
     let errorData = {};
-    
+
     try {
         errorData = await response.json();
         // Ưu tiên lấy message từ detail (FastAPI standard) hoặc message
@@ -28,7 +28,7 @@ const handleHttpError = async (response) => {
     const error = new Error(errorMessage);
     error.status = response.status;
     error.data = errorData; // Gắn data để UI có thể đọc code lỗi (VD: code='SCANNED_PDF')
-    
+
     // Đặc biệt: Đánh dấu lỗi Auth để UI xử lý logout/redirect nếu cần
     if (response.status === 401) error.code = 'UNAUTHORIZED';
     if (response.status === 403) error.code = 'FORBIDDEN';
@@ -201,9 +201,13 @@ export const finalizeUpload = async (file, metadata) => {
         // Backend mong đợi JSON string cho mảng ID
         formData.append('recipients_json', JSON.stringify(metadata.recipients));
     }
+    if (metadata.projectId) {
+        formData.append('project_id', metadata.projectId);
+    }
 
     // 3. Hidden fields from Phase 1 (Metadata Suggestion)
     if (metadata.ocrContent) formData.append('ocr_content', metadata.ocrContent);
+    if (metadata.ocrPages) formData.append('ocr_pages', JSON.stringify(metadata.ocrPages));
     if (metadata.total_pages) formData.append('total_pages', metadata.total_pages);
     if (metadata.key_values) formData.append('key_values_json', JSON.stringify(metadata.key_values));
     if (metadata.summary) formData.append('summary', metadata.summary);
@@ -238,17 +242,40 @@ export const getCategories = async () => {
     return res.data;
 };
 
+// Thêm API lấy dự án thật
+export const getProjects = async () => {
+    try {
+        const headers = getAuthHeaders();
+        headers['Content-Type'] = 'application/json';
+
+        const response = await fetch(`${API_BASE_URL}/projects/list`, {
+            method: 'GET',
+            headers: headers
+        });
+
+        if (!response.ok) {
+            console.warn("Could not fetch projects:", response.statusText);
+            return [];
+        }
+        const res = await response.json();
+        return res.data || [];
+    } catch (e) {
+        console.error("Failed to load projects", e);
+        return [];
+    }
+};
+
 // API lấy User
 export const fetchUsersByDepartment = async () => {
     try {
         const headers = getAuthHeaders();
         headers['Content-Type'] = 'application/json';
-        
+
         const response = await fetch(`${API_BASE_URL}/users/suggestion`, {
             method: 'GET',
             headers: headers
         });
-        
+
         if (!response.ok) {
             // Log warning thôi, không chặn flow chính nếu không load được user gợi ý
             console.warn("Could not fetch user suggestions:", response.statusText);

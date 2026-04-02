@@ -79,6 +79,7 @@ const UC39_UploadPage = () => {
 
     // State mới cho các yêu cầu bổ sung
     const [recipientUsers, setRecipientUsers] = useState([]); // List user thật từ API
+    const [projects, setProjects] = useState([]); // List project từ API
     const [isOcrModalVisible, setIsOcrModalVisible] = useState(false); // Modal confirm OCR
     const [ocrPages, setOcrPages] = useState([]); // Lưu nội dung OCR theo trang
     const [showExpiryDate, setShowExpiryDate] = useState(false);
@@ -119,6 +120,10 @@ const UC39_UploadPage = () => {
                 const users = await uploadApi.fetchUsersByDepartment();
                 //console.log("Fetched recipient users:", users);
                 setRecipientUsers(users);
+
+                // Load danh sách Project
+                const projList = await uploadApi.getProjects();
+                setProjects(projList);
 
             } catch (error) {
                 message.error("Lỗi khởi tạo dữ liệu: " + error.message);
@@ -505,6 +510,7 @@ const UC39_UploadPage = () => {
                 expiryDate: values.expiryDate ? values.expiryDate.toISOString() : null,
                 // Thêm các trường dữ liệu từ bước xử lý trước
                 ocrContent: apiResponse?.ocrContent || '',
+                ocrPages: apiResponse?.ocrPages || [],
                 total_pages: apiResponse?.total_pages || 1,
                 key_values: apiResponse?.suggestedMetadata?.key_values || {},
                 summary: apiResponse?.suggestedMetadata?.summary || '',
@@ -712,6 +718,21 @@ const UC39_UploadPage = () => {
 
                             <Form.Item label="Tags" name="tags">
                                 <Input prefix={<RobotOutlined />} placeholder="tag1, tag2..." />
+                            </Form.Item>
+
+                            <Form.Item 
+                                label="Dự án tài liệu" 
+                                name="projectId"
+                                help="Phân loại tài liệu thuộc dự án cụ thể."
+                            >
+                                <Select
+                                    placeholder="Chọn dự án (Tùy chọn)"
+                                    optionFilterProp="children"
+                                    showSearch
+                                    allowClear
+                                >
+                                    {projects.map(p => <Option key={p.id} value={p.id}>{p.name}</Option>)}
+                                </Select>
                             </Form.Item>
 
                             <Row gutter={16}>
