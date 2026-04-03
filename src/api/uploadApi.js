@@ -190,7 +190,7 @@ export const finalizeUpload = async (file, metadata) => {
     formData.append('tags', tagsString);
 
     formData.append('access_type', metadata.accessType || 'private');
-    formData.append('confidentiality', metadata.confidentiality || 'INTERNAL');
+    formData.append('confidentiality', metadata.confidentiality || 'ORGANIZATION');
     formData.append('description', metadata.description || '');
 
     // 2. Các trường MỚI bổ sung

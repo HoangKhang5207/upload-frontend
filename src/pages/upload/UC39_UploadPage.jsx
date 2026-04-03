@@ -164,10 +164,10 @@ const UC39_UploadPage = () => {
     }, [metadata, form, categories]);
 
     const checkConditionalFields = (currentMeta) => {
-        // UC-39: Ngày hết hạn bắt buộc nếu LOCKED hoặc AccessType=Public (UC-86 expiration)
-        const isLocked = currentMeta.confidentiality === 'LOCKED';
+        // UC-39: Ngày hết hạn bắt buộc nếu PRIVATE hoặc AccessType=Public (UC-86 expiration)
+        const isPrivate = currentMeta.confidentiality === 'PRIVATE';
         const isPublic = currentMeta.accessType === 'public';
-        setShowExpiryDate(isLocked || isPublic);
+        setShowExpiryDate(isPrivate || isPublic);
     };
 
     // Handler riêng cho việc chọn Category thủ công
@@ -746,11 +746,14 @@ const UC39_UploadPage = () => {
                                     </Form.Item>
                                 </Col>
                                 <Col span={12}>
-                                    <Form.Item label="Độ bảo mật" name="confidentiality" initialValue="INTERNAL">
+                                    <Form.Item label="Độ bảo mật" name="confidentiality" initialValue="ORGANIZATION">
                                         <Select>
-                                            <Option value="PUBLIC">PUBLIC (Logo Watermark)</Option>
-                                            <Option value="INTERNAL">INTERNAL (Text Watermark)</Option>
-                                            <Option value="LOCKED">LOCKED (Hạn chế)</Option>
+                                            <Option value="PUBLIC">1. PUBLIC (Công khai)</Option>
+                                            <Option value="ORGANIZATION">2. ORGANIZATION (Nội bộ tổ chức)</Option>
+                                            <Option value="DEPARTMENT">3. DEPARTMENT (Phòng ban)</Option>
+                                            <Option value="PRIVATE">4. PRIVATE (Riêng tư/Cá nhân)</Option>
+                                            <Option value="PROJECT">5. PROJECT (Nhóm dự án)</Option>
+                                            <Option value="EXTERNAL">6. EXTERNAL (Ngoài tổ chức)</Option>
                                         </Select>
                                     </Form.Item>
                                 </Col>
@@ -759,7 +762,7 @@ const UC39_UploadPage = () => {
                             {/* Trường có điều kiện: Expiry Date */}
                             {showExpiryDate && (
                                 <Form.Item
-                                    label="Ngày hết hạn (Bắt buộc cho LOCKED/Public)"
+                                    label="Ngày hết hạn (Bắt buộc cho PRIVATE/Public)"
                                     name="expiryDate"
                                     rules={[{ required: true, message: 'Vui lòng chọn ngày hết hạn' }]}
                                     style={{ background: '#fff1f0', padding: 10, borderRadius: 6 }}
